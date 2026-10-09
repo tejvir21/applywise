@@ -81,5 +81,34 @@ export const applicationIdParamSchema = z.object({
   }),
 });
 
+// POST /api/applications/:id/materials/cover-letter and /resume
+export const generateMaterialsSchema = z.object({
+  body: z.object({
+    replace: z.boolean().default(false),
+  }).strict(),
+});
+
+// POST /api/applications/:id/materials/answers
+export const generateAnswerSchema = z.object({
+  body: z.object({
+    question: z.string().min(1).max(500),
+    replace: z.boolean().default(false),
+  }).strict(),
+});
+
+// PATCH /api/applications/:id/materials (candidate edits; DRAFT only)
+export const updateMaterialsSchema = z.object({
+  body: z.object({
+    coverLetter: z.string().max(20000).optional(),
+    notes: z.string().max(5000).optional(),
+    answers: z.array(applicationAnswerSchema).max(100).optional(),
+    tailoredResume: z.object({
+      summary: z.string().max(5000).optional(),
+      highlights: z.array(z.string().max(1000)).max(20).optional(),
+      skillsUsed: z.array(z.string().max(100)).optional(),
+    }).strict().optional(),
+  }).strict(),
+});
+
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema.shape.body>;
 export type UpdateDraftInput = z.infer<typeof updateDraftSchema.shape.body>;

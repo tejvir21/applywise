@@ -53,3 +53,38 @@ export const applicationEventSchema = z.object({
 export const applicationEventsSchema = z.object({
   events: z.array(applicationEventSchema),
 })
+
+export const tailoredResumeSchema = z.object({
+  summary: z.string(),
+  highlights: z.array(z.string()),
+  skillsUsed: z.array(z.string()),
+  flaggedGaps: z.array(z.string()),
+  generatedAt: z.string(),
+})
+
+export const applicationMaterialsSchema = z.object({
+  coverLetter: z.string().optional(),
+  answers: z.array(applicationAnswerSchema),
+  notes: z.string().optional(),
+  tailoredResume: tailoredResumeSchema.optional(),
+})
+
+export const materialsProvenanceSchema = z
+  .object({
+    provider: z.string(),
+    model: z.string(),
+    generatedAt: z.string(),
+    profileUpdatedAt: z.string().optional(),
+    resumeId: z.string().optional(),
+    resumeVersion: z.number().optional(),
+    jobId: z.string().optional(),
+  })
+  .partial()
+  .optional()
+
+export const applicationMaterialsResponseSchema = z.object({
+  materials: applicationMaterialsSchema,
+  provenance: materialsProvenanceSchema,
+  reviewedAt: z.string().optional(),
+  status: z.string(),
+})

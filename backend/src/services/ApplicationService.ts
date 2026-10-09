@@ -99,6 +99,13 @@ export interface ApplicationDetail {
     coverLetter?: string;
     answers: Array<{ question: string; answer: string; verified: boolean; sensitive: boolean }>;
     notes?: string;
+    tailoredResume?: {
+      summary: string;
+      highlights: string[];
+      skillsUsed: string[];
+      flaggedGaps: string[];
+      generatedAt: Date;
+    };
   };
   status: ApplicationStatus;
   decidedAt?: Date;
@@ -108,6 +115,8 @@ export interface ApplicationDetail {
   manualActionRequired?: string;
   unverifiedConfirmedAt?: Date;
   isCancelled: boolean;
+  materialsReviewedAt?: Date;
+  materialsProvenance?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -141,7 +150,10 @@ function mapApplicationToDetail(app: any): ApplicationDetail {
         sensitive: a.sensitive,
       })),
       notes: app.materials?.notes,
+      tailoredResume: app.materials?.tailoredResume,
     },
+    materialsReviewedAt: app.materialsReviewedAt,
+    materialsProvenance: app.materialsProvenance,
     status: app.status,
     decidedAt: app.decidedAt,
     decisionNote: app.decisionNote,

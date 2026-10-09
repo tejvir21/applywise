@@ -47,6 +47,28 @@ export interface IApplicationMaterials {
   coverLetter?: string;
   answers: IApplicationAnswer[];
   notes?: string;
+  /** AI-generated tailored resume draft. The original resume is never modified. */
+  tailoredResume?: ITailoredResumeDraft;
+}
+
+export interface ITailoredResumeDraft {
+  summary: string;
+  highlights: string[];
+  /** Skill names actually used; always a subset of verified skills. */
+  skillsUsed: string[];
+  flaggedGaps: string[];
+  generatedAt: Date;
+}
+
+// Provenance for generated drafts: which verified data went in.
+export interface IMaterialsProvenance {
+  provider: string;
+  model: string;
+  generatedAt: Date;
+  profileUpdatedAt?: Date;
+  resumeId?: Types.ObjectId;
+  resumeVersion?: number;
+  jobId?: Types.ObjectId;
 }
 
 // Denormalized job snapshot taken at creation so listings stay stable even
@@ -80,6 +102,8 @@ export interface IApplication extends Document {
   unverifiedConfirmedAt?: Date;
   /** Duplicate-protection flag: true once cancelled, freeing the (userId, jobId) slot. */
   isCancelled: boolean;
+  materialsReviewedAt?: Date;
+  materialsProvenance?: IMaterialsProvenance;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -109,6 +133,13 @@ const applicationMaterialsSchema = new Schema<IApplicationMaterials>(
     coverLetter: { type: String, trim: true, maxlength: 20000 },
     answers: { type: [applicationAnswerSchema], default: [] },
     notes: { type: String, trim: true, maxlength: 5000 },
+    tailoredResume: {
+      summary: { type: String, trim: true, maxlength: 5000 },
+      highlights: [{ type: String, trim: true, maxlength: 1000 }],
+      skillsUsed: [{ type: String, trim: true, maxlength: 100 }],
+      flaggedGaps: [{ type: String, trim: true, maxlength: 1000 }],
+      generatedAt: { type: Date },
+    },
   },
   { _id: false },
 );
@@ -150,6 +181,16 @@ const applicationSchema = new Schema<IApplication>(
     idempotencyKey: { type: String, trim: true, maxlength: 100 },
     unverifiedConfirmedAt: { type: Date },
     isCancelled: { type: Boolean, default: false, index: true },
+    materialsReviewedAt: { type: Date },
+    materialsProvenance: {
+      provider: { type: String, trim: true, maxlength: 50 },
+      model: { type: String, trim: true, maxlength: 100 },
+      generatedAt: { type: Date },
+      profileUpdatedAt: { type: Date },
+      resumeId: { type: Schema.Types.ObjectId, ref: 'Resume' },
+      resumeVersion: { type: Number, min: 1 },
+      jobId: { type: Schema.Types.ObjectId, ref: 'Job' },
+    },
   },
   { timestamps: true },
 );

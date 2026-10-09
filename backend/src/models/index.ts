@@ -52,6 +52,8 @@ export type {
   IApplicationAnswer,
   IApplicationMaterials,
   IApplicationJobSnapshot,
+  ITailoredResumeDraft,
+  IMaterialsProvenance,
   ApplicationMode,
   ApplicationStatus,
 } from './Application.js';

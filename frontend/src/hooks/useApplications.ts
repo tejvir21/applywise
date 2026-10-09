@@ -1,5 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { getApplication, getApplicationEvents, getApplications, type ApplicationFilters } from '@/services/applications'
+import {
+  getApplication,
+  getApplicationEvents,
+  getApplicationMaterials,
+  getApplications,
+  type ApplicationFilters,
+} from '@/services/applications'
 
 export function useApplications(filters: ApplicationFilters) {
   return useQuery({
@@ -21,6 +27,14 @@ export function useApplicationEvents(id: string) {
   return useQuery({
     queryKey: ['application-events', id],
     queryFn: () => getApplicationEvents(id),
+    retry: 1,
+  })
+}
+
+export function useApplicationMaterials(id: string) {
+  return useQuery({
+    queryKey: ['application-materials', id],
+    queryFn: () => getApplicationMaterials(id),
     retry: 1,
   })
 }

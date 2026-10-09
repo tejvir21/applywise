@@ -2,7 +2,7 @@
 
 Production-oriented job search assistant for a single candidate workflow: discover jobs, match them against a real profile and resume, generate truthful application materials, and submit only after explicit human approval.
 
-This repository is a monorepo. **Phases 1–6 are implemented and verified:** foundation, JWT authentication, candidate profile + resume parsing, job management, deterministic job matching, and application management with review/approval. Submission, generation, and browser automation are not built yet.
+This repository is a monorepo. **Phases 1–7 are implemented and verified:** foundation, JWT authentication, candidate profile + resume parsing, job management, deterministic job matching, application management with review/approval, and AI-generated application drafts (mock + local Ollama providers). Platform integrations and browser automation are not built yet.
 
 Internal project name: `ai-job-application-agent`
 
@@ -19,6 +19,7 @@ Internal project name: `ai-job-application-agent`
 - Job management: manual entries, deterministic mock imports, search/filter/sort/pagination, save/unsave, ownership-checked update/soft-delete, duplicate prevention via unique `normalizedKey` and partial `(sources.name, sources.sourceJobId)` indexes
 - Deterministic job matching: 0–100 fit score with per-factor explanations, missing-data reporting, and hard eligibility flags (excluded company/type); ranked listing with minimum-score filter; no AI provider involved
 - Application management: persistent drafts with match/job snapshots, explicit state machine (DRAFT → READY_FOR_REVIEW/AWAITING_APPROVAL → APPROVED, CANCELLED branches), review/approval/rejection/cancellation with unverified-answer confirmations, per-user duplicate protection, and audit history; no submission engine
+- AI-generated drafts: provider abstraction with deterministic mock (default) and local Ollama support; cover letters, tailored resume drafts, and answers built only from verified data with code-enforced honesty guards, provenance tracking, and review workflows; original resume never modified
 - React + TypeScript + Vite shell with routes (dashboard, jobs, applications placeholders, profile, resume, settings), layout, and API client
 - Local development that runs **without** a paid AI provider
 - Documentation for architecture, security, development, and the current API
@@ -80,4 +81,4 @@ npm run build
 
 ## Next step
 
-Phase 7: centralized submission-policy engine (authorization, limits, duplicates, confirmations) deciding auto vs. approval flows. No real platform submissions until policy enforcement is implemented and tested.
+Submission-policy engine (auto vs. approval decisions, limits, confirmations), then platform adapters with verified authorizations. No real submissions or automation until policy enforcement exists and is tested.

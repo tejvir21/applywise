@@ -9,6 +9,9 @@ import {
   decideApplicationSchema,
   listApplicationsQuerySchema,
   applicationIdParamSchema,
+  generateMaterialsSchema,
+  generateAnswerSchema,
+  updateMaterialsSchema,
 } from '../schemas/application.js';
 import {
   createApplication,
@@ -20,6 +23,14 @@ import {
   listApplications,
   getAuditHistory,
 } from '../services/ApplicationService.js';
+import {
+  generateCoverLetter,
+  generateResumeDraft,
+  generateAnswer,
+  updateMaterials,
+  markMaterialsReviewed,
+  getMaterials,
+} from '../services/MaterialGenerationService.js';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { NotFoundError } from '../utils/errors.js';
@@ -140,6 +151,76 @@ router.post('/:id/cancel', validate(applicationIdParamSchema), async (req: Authe
   const applicationId = getParamId(req.params);
   assertValidObjectId(applicationId);
   const result = await cancelApplication(getUserId(req), applicationId);
+  res.json({ success: true, data: result });
+});
+
+/**
+ * GET /api/applications/:id/materials
+ * Saved draft materials with provenance and review state. Never submits.
+ */
+router.get('/:id/materials', validate(applicationIdParamSchema), async (req: AuthenticatedRequest, res: Response) => {
+  const applicationId = getParamId(req.params);
+  assertValidObjectId(applicationId);
+  const result = await getMaterials(getUserId(req), applicationId);
+  res.json({ success: true, data: result });
+});
+
+/**
+ * POST /api/applications/:id/materials/cover-letter
+ * Generate a cover-letter draft from verified data (DRAFT only).
+ */
+router.post('/:id/materials/cover-letter', validate(generateMaterialsSchema), async (req: AuthenticatedRequest, res: Response) => {
+  const applicationId = getParamId(req.params);
+  assertValidObjectId(applicationId);
+  const result = await generateCoverLetter(getUserId(req), applicationId, { replace: req.body.replace ?? false });
+  res.status(201).json({ success: true, data: result });
+});
+
+/**
+ * POST /api/applications/:id/materials/resume
+ * Generate a tailored resume draft (DRAFT only). The original resume is untouched.
+ */
+router.post('/:id/materials/resume', validate(generateMaterialsSchema), async (req: AuthenticatedRequest, res: Response) => {
+  const applicationId = getParamId(req.params);
+  assertValidObjectId(applicationId);
+  const result = await generateResumeDraft(getUserId(req), applicationId, { replace: req.body.replace ?? false });
+  res.status(201).json({ success: true, data: result });
+});
+
+/**
+ * POST /api/applications/:id/materials/answers
+ * Generate or revise an answer draft (DRAFT only). Generated answers always
+ * enter unverified so the confirmation flow must clear them.
+ */
+router.post('/:id/materials/answers', validate(generateAnswerSchema), async (req: AuthenticatedRequest, res: Response) => {
+  const applicationId = getParamId(req.params);
+  assertValidObjectId(applicationId);
+  const result = await generateAnswer(getUserId(req), applicationId, req.body.question, { replace: req.body.replace ?? false });
+  res.status(201).json({ success: true, data: result });
+});
+
+/**
+ * PATCH /api/applications/:id/materials
+ * Candidate edits to draft materials (DRAFT only). User edits are preserved:
+ * regeneration without replace:true is rejected rather than overwriting.
+ */
+router.patch('/:id/materials', validate(updateMaterialsSchema), async (req: AuthenticatedRequest, res: Response) => {
+  const applicationId = getParamId(req.params);
+  assertValidObjectId(applicationId);
+  await updateMaterials(getUserId(req), applicationId, req.body);
+  const result = await getMaterials(getUserId(req), applicationId);
+  res.json({ success: true, data: result });
+});
+
+/**
+ * POST /api/applications/:id/materials/review
+ * Mark materials as reviewed. Review only: changes no status and approves nothing.
+ */
+router.post('/:id/materials/review', validate(applicationIdParamSchema), async (req: AuthenticatedRequest, res: Response) => {
+  const applicationId = getParamId(req.params);
+  assertValidObjectId(applicationId);
+  await markMaterialsReviewed(getUserId(req), applicationId);
+  const result = await getMaterials(getUserId(req), applicationId);
   res.json({ success: true, data: result });
 });
 

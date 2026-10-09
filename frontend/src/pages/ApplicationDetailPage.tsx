@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { EmptyState } from '@/components/EmptyState'
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge'
+import { MaterialsEditor } from '@/components/MaterialsEditor'
 import { PageHeader } from '@/components/PageHeader'
 import { useApplication, useApplicationEvents } from '@/hooks/useApplications'
 import {
@@ -108,30 +109,14 @@ export function ApplicationDetailPage() {
         </div>
       )}
 
-      <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
-        <h2 className="text-sm font-semibold text-slate-900">Draft answers</h2>
-        {app.materials.answers.length === 0 && (
-          <p className="mt-1 text-sm text-slate-600">No answers recorded yet.</p>
-        )}
-        <ul className="mt-2 space-y-2">
-          {app.materials.answers.map((answer) => (
-            <li key={answer.question} className="rounded-md bg-slate-50 px-3 py-2 text-sm">
-              <p className="font-medium text-slate-900">{answer.question}</p>
-              <p className="text-slate-700">{answer.answer}</p>
-              <p className="mt-1 text-xs text-slate-500">
-                {answer.verified ? 'verified' : 'unverified — needs confirmation'}
-                {answer.sensitive ? ' · sensitive declaration' : ''}
-              </p>
-            </li>
-          ))}
-        </ul>
-        {app.materials.coverLetter && (
-          <div className="mt-3 text-sm">
-            <h3 className="font-semibold text-slate-900">Cover letter (draft)</h3>
-            <p className="whitespace-pre-wrap text-slate-700">{app.materials.coverLetter}</p>
-          </div>
-        )}
-      </div>
+      <MaterialsEditor
+        applicationId={id}
+        editable={app.status === 'DRAFT'}
+        reviewable={['DRAFT', 'READY_FOR_REVIEW', 'AWAITING_APPROVAL'].includes(app.status)}
+        onChanged={() => {
+          void application.refetch()
+        }}
+      />
 
       {unverified.length > 0 && (app.status === 'DRAFT' || REVIEWABLE.includes(app.status)) && (
         <label className="mt-3 flex items-start gap-2 text-sm text-slate-700">

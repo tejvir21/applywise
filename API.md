@@ -250,6 +250,19 @@ Management, review, and approval only — no submission engine exists, so nothin
 
 Lifecycle: `DRAFT → READY_FOR_REVIEW | AWAITING_APPROVAL → APPROVED → (submission engine, Phase 7+)`, with `CANCELLED` reachable from all pre-submission states and `SUBMITTED` terminal. `SUBMITTING`/`SUBMITTED`/`FAILED`/`NEEDS_MANUAL_ACTION` are system-actor-only: user requests targeting them are rejected. Duplicate protection: partial unique index on `(userId, jobId)` excluding cancelled applications, plus optional client idempotency keys.
 
+### Application materials (`/api/applications/:id/materials`, Phase 7)
+
+AI-generated drafts from verified profile, resume, and job data only. Provider abstraction: deterministic `mock` (default, template-based, no model needed) and local `ollama` (`OLLAMA_BASE_URL`/`OLLAMA_MODEL`, 8GB RAM class hardware for 8b models); `openai` is rejected as unimplemented. Model output is JSON-parsed, Zod-validated, and code-guarded (resume `skillsUsed` intersected with verified skills; required-skill gaps always flagged; answers always enter unverified). Provider failures surface as generic `AI_PROVIDER_ERROR` (502) with no prompts, facts, or keys leaked.
+
+- `POST .../materials/cover-letter` (`{replace?}`) — cover-letter draft; 409 if one exists without `replace`
+- `POST .../materials/resume` (`{replace?}`) — tailored resume draft; original resume untouched
+- `POST .../materials/answers` (`{question, replace?}`) — answer draft, always `verified: false`
+- `GET .../materials` — saved drafts with provenance (`provider`, `model`, profile/resume/job versions) and review state
+- `PATCH .../materials` — candidate edits (user edits preserved: regeneration without `replace` is rejected)
+- `POST .../materials/review` — mark reviewed (review only; no status change, no approval)
+
+Generation and editing require `DRAFT` status, so approved materials are immutable and drafts can never become `SUBMITTED` through these paths.
+
 ## Planned (not implemented)
 
 - Job matching/scoring, application workflow, approval/policy engine, platform adapters beyond manual+mock, AI providers, browser automation
