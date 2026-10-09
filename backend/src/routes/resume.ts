@@ -2,6 +2,8 @@
 
 import { Router, Response } from 'express';
 import { Types } from 'mongoose';
+import multer, { MulterError } from 'multer';
+import { getConfig } from '../config/index.js';
 import {
   setDefaultResumeSchema,
   analyzeResumeSchema,
@@ -22,7 +24,7 @@ import {
 } from '../services/ResumeService.js';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { NotFoundError, ValidationError } from '../utils/errors.js';
+import { AppError, NotFoundError, ValidationError } from '../utils/errors.js';
 
 const router = Router();
 
@@ -46,19 +48,56 @@ function getParamId(params: Record<string, string | string[]>): string {
 
 /**
  * POST /api/resumes
- * Upload a resume file
+ * Upload a resume file (PDF or DOCX, up to the configured size limit).
+ * Files land in memory first, are content-validated by the service, then
+ * persisted through the configured storage provider. Auth runs before any
+ * bytes are parsed, so anonymous uploads are rejected with 401.
  */
-router.post(
-  '/',
-  async (req: AuthenticatedRequest, res: Response) => {
-    // TODO: Use multer for file upload handling
-    // For now, return not implemented
-    res.status(501).json({
-      success: false,
-      error: { code: 'NOT_IMPLEMENTED', message: 'File upload requires multer middleware' },
+router.post('/', async (req: AuthenticatedRequest, res: Response) => {
+  const maxBytes = getConfig().MAX_RESUME_SIZE_MB * 1024 * 1024;
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: maxBytes, files: 1 },
+    fileFilter: (_req, file, cb) => {
+      const name = file.originalname ?? '';
+      const extension = name.slice(name.lastIndexOf('.')).toLowerCase();
+      const allowedNames = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!['.pdf', '.docx'].includes(extension) || !allowedNames.includes(file.mimetype)) {
+        cb(new ValidationError('File type not allowed. Supported: PDF (.pdf), DOCX (.docx)'));
+        return;
+      }
+      cb(null, true);
+    },
+  }).single('file');
+
+  await new Promise<void>((resolve, reject) => {
+    upload(req, res, (err: unknown) => {
+      if (err) reject(err);
+      else resolve();
     });
+  }).catch((err: unknown) => {
+    if (err instanceof MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        throw new AppError('PAYLOAD_TOO_LARGE', `File size exceeds ${maxBytes / 1024 / 1024}MB limit`, 413);
+      }
+      throw new ValidationError(`Upload failed: ${err.message}`);
+    }
+    throw err;
+  });
+
+  const file = (req as AuthenticatedRequest & { file?: Express.Multer.File }).file;
+  if (!file) {
+    throw new ValidationError('A resume file is required (field name "file")');
   }
-);
+
+  const result = await uploadResume(
+    new Types.ObjectId(req.user!.sub),
+    file.buffer,
+    file.originalname,
+    file.mimetype,
+  );
+  res.status(201).json({ success: true, data: result });
+});
 
 /**
  * GET /api/resumes

@@ -109,7 +109,8 @@ function extractSkills(text: string): Array<{ name: string; confidence?: string;
   const foundSkills: Array<{ name: string; confidence?: string; source?: string }> = [];
   
   for (const skill of commonSkills) {
-    const regex = new RegExp(`\\b${skill.replace(/\./g, '\\.')}\\b`, 'i');
+    const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escaped}\\b`, 'i');
     if (regex.test(text)) {
       foundSkills.push({
         name: skill.charAt(0).toUpperCase() + skill.slice(1),

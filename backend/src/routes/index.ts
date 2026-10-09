@@ -7,6 +7,7 @@ import profileRoutes from "./profile.js";
 import resumeRoutes from "./resume.js";
 import jobRoutes from "./jobs.js";
 import applicationRoutes from "./applications.js";
+import platformRoutes from "./platforms.js";
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use("/profile", profileRoutes);
 router.use("/resumes", resumeRoutes);
 router.use("/jobs", jobRoutes);
 router.use("/applications", applicationRoutes);
+router.use("/platforms", platformRoutes);
 
 export default router;

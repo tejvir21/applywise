@@ -3,11 +3,11 @@
 import { Types } from 'mongoose';
 import { ResumeRepository } from '../repositories/ResumeRepository.js';
 import { ResumeAnalysisRepository } from '../repositories/ResumeAnalysisRepository.js';
-import { LocalStorageProvider } from '../storage/LocalStorageProvider.js';
+import { getStorageProvider, type StorageProvider } from '../storage/index.js';
 import { getConfig } from '../config/index.js';
 import { getParserForMimeType } from '../resume/parser/index.js';
 import type { ResumeParser, SupportedMimeType } from '../resume/parser/ResumeParser.js';
-import { NotFoundError, ValidationError, ConflictError } from '../utils/errors.js';
+import { InternalError, NotFoundError, ValidationError, ConflictError } from '../utils/errors.js';
 import {
   getProfile,
   updateProfile,
@@ -16,10 +16,48 @@ import {
 
 const resumeRepo = new ResumeRepository();
 const analysisRepo = new ResumeAnalysisRepository();
-const storage = new LocalStorageProvider();
 
 const ALLOWED_MIME_TYPES: SupportedMimeType[] = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-const MAX_FILE_SIZE = getConfig().MAX_RESUME_SIZE_MB * 1024 * 1024; // Convert MB to bytes
+const ALLOWED_EXTENSIONS = ['.pdf', '.docx'];
+const MAX_RESUMES_PER_USER = 20;
+
+/** Test seam: inject storage/repositories (defaults preserve production wiring). */
+export interface ResumeServiceDeps {
+  storage?: StorageProvider;
+  resumes?: ResumeRepository;
+  analyses?: ResumeAnalysisRepository;
+}
+
+async function resolveDeps(deps: ResumeServiceDeps = {}) {
+  return {
+    storage: deps.storage ?? (await getStorageProvider()),
+    resumes: deps.resumes ?? resumeRepo,
+    analyses: deps.analyses ?? analysisRepo,
+  };
+}
+
+function maxFileSizeBytes(): number {
+  return getConfig().MAX_RESUME_SIZE_MB * 1024 * 1024;
+}
+
+/** Magic bytes per format: PDF "%PDF-", DOCX is a ZIP ("PK\x03\x04"). */
+function sniffMimeType(file: Buffer): SupportedMimeType | null {
+  if (file.length >= 5 && file.subarray(0, 5).toString('ascii') === '%PDF-') {
+    return 'application/pdf';
+  }
+  if (
+    file.length >= 4 &&
+    file[0] === 0x50 && file[1] === 0x4b && file[2] === 0x03 && file[3] === 0x04
+  ) {
+    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  }
+  return null;
+}
+
+function extensionOf(filename: string): string {
+  const dot = filename.lastIndexOf('.');
+  return dot >= 0 ? filename.slice(dot).toLowerCase() : '';
+}
 
 export interface UploadResumeResult {
   resume: {
@@ -45,68 +83,81 @@ export interface ResumeListItem {
 }
 
 /**
- * Upload a resume file
+ * Upload a resume file. Validates content (never trusts client MIME alone),
+ * stores through the configured provider, and only then persists metadata.
+ * A stored file is deleted again if database writes fail, so failed uploads
+ * leave no orphans.
  */
 export async function uploadResume(
   userId: Types.ObjectId,
   file: Buffer,
   originalFilename: string,
-  mimeType: string
+  mimeType: string,
+  deps: ResumeServiceDeps = {},
 ): Promise<UploadResumeResult> {
+  const { storage, resumes, analyses } = await resolveDeps(deps);
+
   // Validate file
-  validateFile(originalFilename, mimeType, file.length);
+  validateFile(originalFilename, mimeType, file);
 
   // Check if user already has max resumes (optional limit)
-  const count = await resumeRepo.countByUserId(userId);
-  if (count >= 20) {
-    throw new ValidationError('Maximum number of resumes (20) reached');
+  const count = await resumes.countByUserId(userId);
+  if (count >= MAX_RESUMES_PER_USER) {
+    throw new ValidationError(`Maximum number of resumes (${MAX_RESUMES_PER_USER}) reached`);
   }
 
-  // Generate storage key
+  // Generate storage key (server-controlled path: no user input in the key
+  // beyond a sanitized extension, so traversal is impossible)
   const resumeId = new Types.ObjectId();
-  const storedFilename = `${resumeId.toString()}.${getExtension(originalFilename)}`;
+  const storedFilename = `${resumeId.toString()}.${extensionOf(originalFilename).slice(1) || 'bin'}`;
   const storageKey = `${userId.toString()}/${storedFilename}`;
 
   // Store file
   await storage.save(storageKey, file, mimeType);
 
-  // Check if this should be the default resume
-  const existingCount = await resumeRepo.countByUserId(userId);
-  const isDefault = existingCount === 0;
+  try {
+    // Check if this should be the default resume
+    const existingCount = await resumes.countByUserId(userId);
+    const isDefault = existingCount === 0;
 
-  // Create resume document
-  const resume = await resumeRepo.create({
-    userId,
-    originalFilename,
-    storedFilename,
-    mimeType,
-    fileSize: file.length,
-    storageKey,
-    status: 'ready',
-    version: 1,
-    isDefault,
-  });
+    // Create resume document
+    const resume = await resumes.create({
+      userId,
+      originalFilename,
+      storedFilename,
+      mimeType,
+      fileSize: file.length,
+      storageKey,
+      status: 'ready',
+      version: 1,
+      isDefault,
+    });
 
-  // Create analysis placeholder
-  const analysis = await analysisRepo.create({
-    resumeId: resume._id,
-    userId,
-    status: 'pending',
-  });
+    // Create analysis placeholder
+    const analysis = await analyses.create({
+      resumeId: resume._id,
+      userId,
+      status: 'pending',
+    });
 
-  return {
-    resume: {
-      id: resume._id.toString(),
-      originalFilename: resume.originalFilename,
-      status: resume.status,
-      isDefault: resume.isDefault,
-      createdAt: resume.createdAt,
-    },
-    analysis: {
-      id: analysis._id.toString(),
-      status: analysis.status,
-    },
-  };
+    return {
+      resume: {
+        id: resume._id.toString(),
+        originalFilename: resume.originalFilename,
+        status: resume.status,
+        isDefault: resume.isDefault,
+        createdAt: resume.createdAt,
+      },
+      analysis: {
+        id: analysis._id.toString(),
+        status: analysis.status,
+      },
+    };
+  } catch (err) {
+    // Database write failed after the file landed: remove the orphan.
+    await storage.delete(storageKey).catch(() => undefined);
+    throw err;
+  }
 }
 
 /**
@@ -145,7 +196,8 @@ export async function getResume(userId: Types.ObjectId, resumeId: string) {
 /**
  * Download resume file
  */
-export async function downloadResume(userId: Types.ObjectId, resumeId: string) {
+export async function downloadResume(userId: Types.ObjectId, resumeId: string, deps: ResumeServiceDeps = {}) {
+  const { storage } = await resolveDeps(deps);
   const resume = await resumeRepo.findByIdAndUserIdOrThrow(resumeId, userId);
   const stream = await storage.get(resume.storageKey);
   
@@ -163,12 +215,13 @@ export async function downloadResume(userId: Types.ObjectId, resumeId: string) {
 /**
  * Delete resume
  */
-export async function deleteResume(userId: Types.ObjectId, resumeId: string): Promise<void> {
+export async function deleteResume(userId: Types.ObjectId, resumeId: string, deps: ResumeServiceDeps = {}): Promise<void> {
+  const { storage } = await resolveDeps(deps);
   const resume = await resumeRepo.findByIdAndUserIdOrThrow(resumeId, userId);
-  
+
   // Delete file
   await storage.delete(resume.storageKey);
-  
+
   // Delete analysis
   await analysisRepo.deleteByResumeId(resume._id, userId);
   
@@ -184,9 +237,12 @@ export async function setDefaultResume(userId: Types.ObjectId, resumeId: string)
 }
 
 /**
- * Start/resume analysis
+ * Start/resume analysis. Parses the actual stored file bytes — never an
+ * empty placeholder. Failures mark the analysis failed with a warning and
+ * rethrow so callers see a consistent error envelope.
  */
-export async function analyzeResume(userId: Types.ObjectId, resumeId: string) {
+export async function analyzeResume(userId: Types.ObjectId, resumeId: string, deps: ResumeServiceDeps = {}) {
+  const { storage } = await resolveDeps(deps);
   const resume = await resumeRepo.findByIdAndUserIdOrThrow(resumeId, userId);
   
   // Find or create analysis
@@ -200,7 +256,7 @@ export async function analyzeResume(userId: Types.ObjectId, resumeId: string) {
     });
   } else if (analysis.status === 'completed' || analysis.status === 'processing') {
     // Reset for re-analysis
-    const updated = await analysisRepo.update(analysis._id.toString(), userId, {
+    const updated = await analysisRepo.update(resume._id, userId, {
       status: 'processing',
       extractedText: '',
       structuredData: {},
@@ -209,7 +265,7 @@ export async function analyzeResume(userId: Types.ObjectId, resumeId: string) {
     });
     if (updated) analysis = updated;
   } else {
-    const updated = await analysisRepo.update(analysis._id.toString(), userId, {
+    const updated = await analysisRepo.update(resume._id, userId, {
       status: 'processing',
     });
     if (updated) analysis = updated;
@@ -217,23 +273,38 @@ export async function analyzeResume(userId: Types.ObjectId, resumeId: string) {
   
   // At this point, analysis is guaranteed to be non-null
   const analysisId = analysis._id.toString();
-  
+
+  // Read the real stored bytes (streamed into memory; bounded by the upload limit)
+  const fileStream = await storage.get(resume.storageKey);
+  if (!fileStream) {
+    await analysisRepo.update(resume._id, userId, {
+      status: 'failed',
+      warnings: [{
+        field: 'general',
+        message: 'Stored resume file is missing',
+        severity: 'error',
+      }],
+    });
+    throw new InternalError('Stored resume file is missing');
+  }
+  const file = await streamToBuffer(fileStream);
+
   // Perform analysis
   try {
     const parser = getParserForMimeType(resume.mimeType as SupportedMimeType);
-    const result = await parser.parse(Buffer.from('')); // TODO: Get actual file from storage
-    
-    await analysisRepo.update(analysisId, userId, {
+    const result = await parser.parse(file);
+
+    await analysisRepo.update(resume._id, userId, {
       status: 'completed',
       extractedText: result.extractedText,
       structuredData: result.structuredData,
       warnings: result.warnings,
       confidence: calculateOverallConfidence(result.structuredData),
     });
-    
+
     return { success: true, analysisId };
   } catch (error) {
-    await analysisRepo.update(analysisId, userId, {
+    await analysisRepo.update(resume._id, userId, {
       status: 'failed',
       warnings: [{
         field: 'general',
@@ -241,7 +312,10 @@ export async function analyzeResume(userId: Types.ObjectId, resumeId: string) {
         severity: 'error',
       }],
     });
-    throw error;
+    // Unparseable user content is a client-data problem (422), not a server crash.
+    throw new ValidationError('Resume content could not be analyzed', {
+      reason: error instanceof Error ? error.message : 'Analysis failed',
+    });
   }
 }
 
@@ -307,28 +381,66 @@ export async function importToProfile(
   
   // Get current profile
   const existingProfile = await getProfile(userId);
-  
+
+  // Fill-only-empty import: never silently overwrite verified profile data.
+  // Fields that already hold a different value are reported in `conflicts`
+  // and left untouched; only empty fields are filled (`imported`).
+  const isFilled = (value: unknown): boolean =>
+    value !== undefined && value !== null && String(value).trim() !== '';
+
   for (const field of fields) {
     try {
       switch (field) {
         case 'personal':
           if (analysis.structuredData.personal) {
-            await updateProfile(userId, {
-              firstName: analysis.structuredData.personal.name?.split(' ')[0],
-              lastName: analysis.structuredData.personal.name?.split(' ').slice(1).join(' '),
-              email: analysis.structuredData.personal.email,
-              phone: analysis.structuredData.personal.phone,
-              location: analysis.structuredData.personal.location,
-            });
-            imported.push('personal');
+            const personal = analysis.structuredData.personal as Record<string, string | undefined>;
+            const nameParts = (personal.name ?? '').split(' ').filter(Boolean);
+            const candidates: Record<string, string | undefined> = {
+              firstName: nameParts[0],
+              lastName: nameParts.slice(1).join(' ') || undefined,
+              email: personal.email,
+              phone: personal.phone,
+              location: personal.location,
+            };
+            const patch: Record<string, string> = {};
+            const contested: string[] = [];
+            for (const [key, value] of Object.entries(candidates)) {
+              if (!isFilled(value)) continue;
+              const current = (existingProfile as Record<string, unknown> | null)?.[key];
+              if (!isFilled(current)) {
+                patch[key] = value as string;
+              } else if (norm(current) !== norm(value)) {
+                contested.push(key);
+              }
+            }
+            if (Object.keys(patch).length > 0) {
+              await updateProfile(userId, patch);
+              imported.push('personal');
+            }
+            if (contested.length > 0) {
+              conflicts.push(`personal (already set: ${contested.join(', ')})`);
+            } else if (Object.keys(patch).length === 0) {
+              skipped.push(field);
+            }
+          } else {
+            skipped.push(field);
           }
           break;
         case 'summary':
           if (analysis.structuredData.summary) {
-            await updateProfile(userId, {
-              professionalSummary: analysis.structuredData.summary,
-            });
-            imported.push('summary');
+            const current = existingProfile?.professionalSummary;
+            if (!isFilled(current)) {
+              await updateProfile(userId, {
+                professionalSummary: analysis.structuredData.summary as string,
+              });
+              imported.push('summary');
+            } else if (norm(current) !== norm(analysis.structuredData.summary)) {
+              conflicts.push('summary (already set)');
+            } else {
+              skipped.push(field);
+            }
+          } else {
+            skipped.push(field);
           }
           break;
         case 'skills':
@@ -360,31 +472,61 @@ export async function importToProfile(
   return { imported, skipped, conflicts };
 }
 
-function validateFile(filename: string, mimeType: string, size: number): void {
-  if (!ALLOWED_MIME_TYPES.includes(mimeType as any)) {
-    throw new ValidationError(`File type not allowed. Supported: PDF, DOCX`);
-  }
-  
-  if (size > MAX_FILE_SIZE) {
-    throw new ValidationError(`File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
-  }
-  
+function norm(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function validateFile(filename: string, mimeType: string, file: Buffer): void {
   if (!filename || filename.length > 255) {
     throw new ValidationError('Invalid filename');
   }
-  
+
   // Check for path traversal
   if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
     throw new ValidationError('Invalid filename');
   }
+
+  const extension = extensionOf(filename);
+  if (!ALLOWED_EXTENSIONS.includes(extension)) {
+    throw new ValidationError('File type not allowed. Supported: PDF (.pdf), DOCX (.docx)');
+  }
+
+  if (!ALLOWED_MIME_TYPES.includes(mimeType as SupportedMimeType)) {
+    throw new ValidationError('File type not allowed. Supported: PDF, DOCX');
+  }
+
+  // Never trust the client MIME type alone: content must match its container.
+  const sniffed = sniffMimeType(file);
+  if (!sniffed) {
+    throw new ValidationError('File content is not a recognizable PDF or DOCX document');
+  }
+  const sniffedExtension = sniffed === 'application/pdf' ? '.pdf' : '.docx';
+  if (extension !== sniffedExtension) {
+    throw new ValidationError(`File extension (${extension}) does not match file content (${sniffedExtension})`);
+  }
+
+  const maxBytes = maxFileSizeBytes();
+  if (file.length === 0) {
+    throw new ValidationError('File is empty');
+  }
+  if (file.length > maxBytes) {
+    throw new ValidationError(`File size exceeds ${maxBytes / 1024 / 1024}MB limit`);
+  }
 }
 
-function getExtension(filename: string): string {
-  return filename.split('.').pop()?.toLowerCase() || 'pdf';
+/** Collect a readable stream into a Buffer (bounded by the upload size limit). */
+function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    stream.on('data', (chunk: Buffer | string) => {
+      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    });
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+  });
 }
 
 function calculateOverallConfidence(structuredData: Record<string, unknown>): string {
-  // Simple heuristic: if we extracted meaningful data, confidence is medium
   const hasPersonal = structuredData.personal && Object.keys(structuredData.personal).length > 0;
   const hasSkills = Array.isArray(structuredData.skills) && structuredData.skills.length > 0;
   const hasExperience = Array.isArray(structuredData.experience) && structuredData.experience.length > 0;

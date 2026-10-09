@@ -1,6 +1,7 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '@/layouts/AppLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
+import { RequireAuth } from '@/components/RequireAuth'
 import { ApplicationDetailPage } from '@/pages/ApplicationDetailPage'
 import { ApplicationReviewPage } from '@/pages/ApplicationReviewPage'
 import { ApplicationsPage } from '@/pages/ApplicationsPage'
@@ -24,7 +25,11 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    element: <AppLayout />,
+    element: (
+      <RequireAuth>
+        <AppLayout />
+      </RequireAuth>
+    ),
     children: [
       { path: '/', element: <Navigate to="/dashboard" replace /> },
       { path: '/dashboard', element: <DashboardPage /> },

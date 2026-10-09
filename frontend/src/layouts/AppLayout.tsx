@@ -2,14 +2,16 @@ import {
   Briefcase,
   FileText,
   LayoutDashboard,
+  LogOut,
   Menu,
   Settings,
   UserRound,
 } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { HealthBanner } from '@/components/HealthBanner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 import { useUiStore } from '@/stores/ui-store'
 
 const navItems = [
@@ -23,6 +25,14 @@ const navItems = [
 export function AppLayout() {
   const sidebarOpen = useUiStore((state) => state.sidebarOpen)
   const toggleSidebar = useUiStore((state) => state.toggleSidebar)
+  const email = useAuthStore((state) => state.email)
+  const logout = useAuthStore((state) => state.logout)
+  const navigate = useNavigate()
+
+  async function onSignOut() {
+    await logout()
+    navigate('/login')
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -33,7 +43,14 @@ export function AppLayout() {
           </Button>
           <span className="text-sm font-semibold text-slate-900">AI Job Application Agent</span>
         </div>
-        <HealthBanner />
+        <div className="flex items-center gap-3">
+          {email && <span className="hidden text-sm text-slate-600 sm:inline">{email}</span>}
+          <Button variant="ghost" size="sm" onClick={() => void onSignOut()} aria-label="Sign out">
+            <LogOut className="h-4 w-4" />
+            <span className="ml-1 hidden sm:inline">Sign out</span>
+          </Button>
+          <HealthBanner />
+        </div>
       </header>
       <div className="flex">
         <aside

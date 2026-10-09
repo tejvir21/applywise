@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuthStore } from '@/stores/auth-store'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard'
   const login = useAuthStore((s) => s.login)
   const isAuthenticating = useAuthStore((s) => s.isAuthenticating)
   const [email, setEmail] = useState('')
@@ -17,7 +19,7 @@ export function LoginPage() {
     setError(null)
     try {
       await login(email.trim(), password)
-      navigate('/dashboard')
+      navigate(from, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign-in failed')
     }

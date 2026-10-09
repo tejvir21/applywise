@@ -1,5 +1,8 @@
 /** Resume parser abstraction. */
 
+import { PdfResumeParser } from './PdfResumeParser.js';
+import { DocxResumeParser } from './DocxResumeParser.js';
+
 export interface ParsedResumeResult {
   extractedText: string;
   structuredData: Record<string, unknown>;
@@ -18,6 +21,7 @@ export function isSupportedMimeType(mimeType: string): mimeType is SupportedMime
   return ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(mimeType);
 }
 
+/** Resolve the real format-specific parser (deterministic, no AI calls). */
 export function getParserForMimeType(mimeType: SupportedMimeType): ResumeParser {
   switch (mimeType) {
     case 'application/pdf':
@@ -26,50 +30,5 @@ export function getParserForMimeType(mimeType: SupportedMimeType): ResumeParser 
       return new DocxResumeParser();
     default:
       throw new Error(`Unsupported MIME type: ${mimeType}`);
-  }
-}
-
-// Placeholder implementations - will be replaced with actual implementations
-class PdfResumeParser implements ResumeParser {
-  async extractText(file: Buffer): Promise<string> {
-    // Placeholder - will use pdf-parse or similar
-    return '';
-  }
-
-  async extractStructuredData(text: string): Promise<Record<string, unknown>> {
-    // Placeholder - will use deterministic extraction
-    return {};
-  }
-
-  async parse(file: Buffer): Promise<ParsedResumeResult> {
-    const extractedText = await this.extractText(file);
-    const structuredData = await this.extractStructuredData(extractedText);
-    return {
-      extractedText,
-      structuredData,
-      warnings: [],
-    };
-  }
-}
-
-class DocxResumeParser implements ResumeParser {
-  async extractText(file: Buffer): Promise<string> {
-    // Placeholder - will use mammoth or similar
-    return '';
-  }
-
-  async extractStructuredData(text: string): Promise<Record<string, unknown>> {
-    // Placeholder - will use deterministic extraction
-    return {};
-  }
-
-  async parse(file: Buffer): Promise<ParsedResumeResult> {
-    const extractedText = await this.extractText(file);
-    const structuredData = await this.extractStructuredData(extractedText);
-    return {
-      extractedText,
-      structuredData,
-      warnings: [],
-    };
   }
 }

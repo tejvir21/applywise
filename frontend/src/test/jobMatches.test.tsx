@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -84,7 +85,9 @@ function renderJobsPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <JobsPage />
+      <MemoryRouter>
+        <JobsPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -174,7 +177,15 @@ describe('JobsPage', () => {
 
     // The query retries once before surfacing the error; allow time for it.
     expect(await screen.findByRole('alert', undefined, { timeout: 5000 })).toHaveTextContent('Could not load matches')
+    expect(screen.getByText(/Sign in again/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+
+  it('points to profile creation when matching has no profile', async () => {
+    stubFetch({ success: false, error: { code: 'NOT_FOUND', message: 'Profile not found', details: {} } }, 404)
+    renderJobsPage()
+
+    expect(await screen.findByRole('alert', undefined, { timeout: 5000 })).toHaveTextContent('Create your profile')
   })
 
   it('expands the match explanation on demand', async () => {

@@ -1,7 +1,7 @@
 /** Local filesystem storage provider for resume files. */
 
 import { createReadStream, createWriteStream, existsSync, mkdirSync, unlinkSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { join, dirname, resolve, sep } from 'path';
 import { StorageProvider } from './StorageProvider.js';
 import { getConfig } from '../config/index.js';
 
@@ -72,8 +72,19 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   private getFilePath(key: string): string {
-    // Prevent path traversal
-    const safeKey = key.replace(/[^a-zA-Z0-9-_/]/g, '');
-    return join(this.basePath, safeKey);
+    // Neutralize traversal without mangling legitimate names (dots and
+    // extensions are preserved): drop drive letters, split on separators,
+    // discard empty / '.' / '..' segments, then verify containment.
+    const segments = key
+      .replace(/^[a-zA-Z]:/, '')
+      .split(/[\\/]+/)
+      .filter((part) => part.length > 0 && part !== '.' && part !== '..');
+    const filePath = join(this.basePath, ...segments);
+    const resolvedBase = resolve(this.basePath) + sep;
+    const resolved = resolve(filePath);
+    if (resolved !== resolve(this.basePath) && !resolved.startsWith(resolvedBase)) {
+      throw new Error('Invalid storage key');
+    }
+    return resolved;
   }
 }

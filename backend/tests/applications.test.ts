@@ -382,6 +382,11 @@ describe('Applications (Phase 6)', () => {
       // System actor (future submission engine) may use the full map.
       expect(() => assertTransitionAllowed('APPROVED', 'SUBMITTING', 'system')).not.toThrow();
       expect(() => assertTransitionAllowed('SUBMITTING', 'SUBMITTED', 'system')).not.toThrow();
+      // Safe handoff: approved applications may require manual completion.
+      // Only the system actor (handoff/submission paths) may enter it.
+      expect(() => assertTransitionAllowed('APPROVED', 'NEEDS_MANUAL_ACTION', 'system')).not.toThrow();
+      expect(() => assertTransitionAllowed('APPROVED', 'NEEDS_MANUAL_ACTION', 'user')).toThrow(/reserved for the submission engine/);
+      expect(() => assertTransitionAllowed('DRAFT', 'NEEDS_MANUAL_ACTION', 'user')).toThrow();
     });
   });
 

@@ -5,6 +5,8 @@ export { CandidateProfileModel } from './CandidateProfile.js';
 export { ResumeModel, ResumeAnalysisModel } from './Resume.js';
 export { JobModel, SavedJobModel } from './Job.js';
 export { ApplicationModel, ApplicationEventModel, APPLICATION_STATUSES } from './Application.js';
+export { SubmissionSettingsModel } from './SubmissionSettings.js';
+export { RefreshSessionModel } from './RefreshSession.js';
 export type {
   ICandidateProfile,
   ISkill,

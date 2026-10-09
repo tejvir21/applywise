@@ -133,8 +133,9 @@ function extractSkills(text: string): Array<{ name: string; confidence?: string;
   const foundSkills: Array<{ name: string; confidence?: string; source?: string }> = [];
   
   for (const skill of commonSkills) {
-    // Use word boundary regex for more accurate matching
-    const regex = new RegExp(`\\b${skill.replace(/\./g, '\\.')}\\b`, 'i');
+    // Use word boundary regex for more accurate matching (escape regex chars: c++, c#, node.js, ...)
+    const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escaped}\\b`, 'i');
     if (regex.test(text)) {
       foundSkills.push({
         name: skill.charAt(0).toUpperCase() + skill.slice(1),

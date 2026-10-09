@@ -159,17 +159,19 @@ Refresh access token using refresh token (rotates refresh token).
 
 **Errors:** `VALIDATION_ERROR` (422), `UNAUTHORIZED` (401), `RATE_LIMITED` (429)
 
+### `POST /api/auth/refresh`
+
+Refresh access token. Accepts `{ "refresh_token": "..." }` in the body (legacy/mobile contract) or falls back to the HttpOnly refresh cookie (browser silent-refresh contract). Rotates the refresh token: the presented token is revoked and cannot be replayed.
+
 ### `POST /api/auth/logout`
 
-Logout - client should discard tokens.
+Logout - clears the `refresh_token` HttpOnly cookie and revokes the server-side session (presented body or cookie token); client must also discard tokens. Idempotent: unknown or expired tokens still return 200 with the cookie cleared.
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": { "message": "Logged out successfully" }
-}
-```
+### `GET /api/auth/session`
+
+Restore a session from the HttpOnly refresh cookie (no body needed). Rotates the cookie and returns `{ access_token, token_type, expires_in }` only — the refresh token never appears in the response. 401 when no valid cookie exists (signed-out state).
+
+Sessions: short-lived access tokens (Authorization header) plus rotating refresh tokens tracked server-side (`jti` allow-list with TTL cleanup). Logout and rotation revoke sessions, so copied tokens stop working. Cookies are `HttpOnly`, `Secure` + `SameSite=None` in production (cross-site frontend/backend), `Lax` without `Secure` in development; CORS origins stay explicit, never wildcard, with credentials enabled.
 
 ### `GET /api/auth/me`
 
@@ -206,12 +208,15 @@ All routes below require `Authorization: Bearer <access_token>` unless noted.
 
 ### Resumes (`/api/resumes`)
 
+- `POST /api/resumes` — multipart upload, field name `file`. PDF (`.pdf`) or DOCX (`.docx`) only, up to `MAX_RESUME_SIZE_MB` (default 10 MB). Extension, declared MIME, and content magic bytes (`%PDF-`, ZIP) must agree; mismatches, empty files, and traversal filenames are rejected (422 `VALIDATION_ERROR`), oversize files with 413 `PAYLOAD_TOO_LARGE`. Files persist through the configured storage provider under server-controlled keys; metadata is written only after storage succeeds, and orphaned files are removed if the database write fails. Responds 201 with the resume plus a `pending` analysis placeholder.
 - `GET /api/resumes`, `GET /api/resumes/:id` — list / fetch own resumes
 - `GET /api/resumes/:id/download` — download stored file
-- `DELETE /api/resumes/:id` — delete own resume
+- `DELETE /api/resumes/:id` — soft-delete own resume and remove the stored file
 - `PATCH /api/resumes/:id/default` — mark default resume
-- `POST /api/resumes/:id/analyze`, `GET /api/resumes/:id/analysis`, `POST /api/resumes/:id/analysis/retry` — parse/analysis workflow
-- `POST /api/resumes/:id/import` — import parsed data into profile
+- `POST /api/resumes/:id/analyze`, `GET /api/resumes/:id/analysis`, `POST /api/resumes/:id/analysis/retry` — parse the stored bytes with deterministic local parsers (pdf-parse/mammoth); unparseable content marks the analysis `failed` with a warning and returns 422 (never a crash)
+- `POST /api/resumes/:id/import` — import parsed data into profile **without overwriting verified values**: only empty fields are filled; pre-existing differing values are reported in `conflicts` and preserved; skills stay additive without duplicates
+
+Storage requirements: `STORAGE_PROVIDER=local` persists under `RESUME_STORAGE_PATH` (default `./storage/uploads`), which production deployments must back with durable storage (mounted volume). `s3`/`cloudinary` are not implemented and fail clearly instead of pretending durability.
 
 ### Jobs (`/api/jobs`, Phase 4)
 
@@ -262,6 +267,19 @@ AI-generated drafts from verified profile, resume, and job data only. Provider a
 - `POST .../materials/review` — mark reviewed (review only; no status change, no approval)
 
 Generation and editing require `DRAFT` status, so approved materials are immutable and drafts can never become `SUBMITTED` through these paths.
+
+### Platforms (`/api/platforms`, Phase 8)
+
+Researched capability matrix — no platform has a verified automatic-submission path, so nothing here submits. Submission is never inferred from discovery; unknown fails closed.
+
+- `GET /api/platforms` — all six descriptors (`linkedin`, `indeed`, `naukri`, `apna`, `wellfound`, `career-site`) with eight independently graded capabilities (discovery, detail, questions, prepare, upload, submit, verify, handoff) plus evidence and authorization notes
+- `GET /api/platforms/:platform` — one descriptor (404 unknown)
+- `GET /api/platforms/settings/submission` — caller settings with safe defaults (`dailyLimit` 10, `minMatchScore` 80, unpaused)
+- `PUT /api/platforms/settings/submission` — user-scoped singleton (global pause, daily limit 1–100, per-platform `auto|permission|disabled` + `authorized`)
+- `POST /api/applications/:id/policy` (`{platform}`) — stateless policy evaluation: `auto_allowed | approval_required | manual_only | blocked` with reasons (ownership, capability, authorization, threshold, eligibility, confirmations, daily budget, duplicates, pause)
+- `POST /api/applications/:id/handoff` — APPROVED-only safe handoff: records the event, moves to `NEEDS_MANUAL_ACTION` (system actor) with completion instructions, returns the platform application URL. Opening the page never marks anything submitted.
+
+Capability findings: LinkedIn submission unsupported (partner-only Apply Connect/posting APIs, new partnerships closed); Indeed apply/detail paths robots-disallowed; Naukri bot-walled with no public API; Apna discovery unverified; Wellfound recruiter-side only; career sites per-site. Handoff supported everywhere (user-controlled, no automation). No real integration selected — mock submission adapter exists for deterministic tests only and is explicitly labeled.
 
 ## Planned (not implemented)
 

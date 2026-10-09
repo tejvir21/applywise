@@ -35,7 +35,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetchWithAuthRetry(`${API_BASE_URL}${path}`, {
     method: "GET",
     headers: withAuthHeader({ Accept: "application/json" }),
   });
@@ -43,7 +43,7 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetchWithAuthRetry(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: withAuthHeader({ Accept: "application/json", "Content-Type": "application/json" }),
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -52,10 +52,37 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
 }
 
 export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetchWithAuthRetry(`${API_BASE_URL}${path}`, {
     method: "PATCH",
     headers: withAuthHeader({ Accept: "application/json", "Content-Type": "application/json" }),
     body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return parseResponse<T>(response);
+}
+
+export async function apiPut<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetchWithAuthRetry(`${API_BASE_URL}${path}`, {
+    method: "PUT",
+    headers: withAuthHeader({ Accept: "application/json", "Content-Type": "application/json" }),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return parseResponse<T>(response);
+}
+
+export async function apiDelete<T>(path: string): Promise<T> {
+  const response = await fetchWithAuthRetry(`${API_BASE_URL}${path}`, {
+    method: "DELETE",
+    headers: withAuthHeader({ Accept: "application/json" }),
+  });
+  return parseResponse<T>(response);
+}
+
+export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
+  // No Content-Type header: the browser sets the multipart boundary itself.
+  const response = await fetchWithAuthRetry(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: withAuthHeader({ Accept: "application/json" }),
+    body: form,
   });
   return parseResponse<T>(response);
 }
@@ -68,11 +95,74 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
 function withAuthHeader(headers: Record<string, string>): Record<string, string> {
   if (accessToken) {
     return { ...headers, Authorization: `Bearer ${accessToken}` };
   }
   return headers;
+}
+
+/**
+ * Silent refresh wiring (single mechanism, set once by the auth store):
+ * - refreshAccessToken performs a cookie-based refresh and resolves the new
+ *   access token (or null when no session can be restored).
+ * - onSessionExpired runs when refresh fails (store clears state; app navigates).
+ */
+let refreshAccessToken: (() => Promise<string | null>) | null = null;
+let onSessionExpired: (() => void) | null = null;
+let refreshInFlight: Promise<string | null> | null = null;
+
+export function setRefreshHandler(fn: () => Promise<string | null>) {
+  refreshAccessToken = fn;
+}
+
+export function setSessionExpiredHandler(fn: () => void) {
+  onSessionExpired = fn;
+}
+
+/** Auth endpoints must surface their own 401s (login failures, signed-out
+ *  restore) instead of triggering a refresh loop. */
+function isAuthPath(url: string): boolean {
+  return (
+    url.includes("/api/auth/login") ||
+    url.includes("/api/auth/register") ||
+    url.includes("/api/auth/refresh") ||
+    url.includes("/api/auth/session")
+  );
+}
+
+/**
+ * Credentialed fetch with exactly one 401 retry: concurrent 401s share a
+ * single refresh flight, and a failed refresh signs the session out once.
+ * Never loops: the retried request is never refreshed again.
+ */
+async function fetchWithAuthRetry(url: string, init: RequestInit): Promise<Response> {
+  const response = await fetch(url, { ...init, credentials: "include" });
+  if (response.status !== 401 || isAuthPath(url) || !refreshAccessToken) {
+    return response;
+  }
+  try {
+    refreshInFlight ??= refreshAccessToken().finally(() => {
+      refreshInFlight = null;
+    });
+    const token = await refreshInFlight;
+    if (!token) {
+      onSessionExpired?.();
+      return response;
+    }
+    return await fetch(url, {
+      ...init,
+      credentials: "include",
+      headers: { ...((init.headers ?? {}) as Record<string, string>), Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    onSessionExpired?.();
+    return response;
+  }
 }
 
 export { API_BASE_URL };

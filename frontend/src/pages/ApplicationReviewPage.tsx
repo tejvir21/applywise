@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 
@@ -8,12 +8,19 @@ export function ApplicationReviewPage() {
     <div>
       <PageHeader
         title="Review application"
-        description="Human approval is required before submission. This screen is a route shell until Phase 8."
+        description="Human approval is required before anything proceeds. Review actions live on the application detail page."
       />
       <EmptyState
-        title={`Review for ${id ?? 'application'} is not ready`}
-        description="Approve, reject, edit, and save-for-later actions will appear here. Nothing is submitted automatically."
+        title="This is a route shell"
+        description="Nothing is submitted automatically."
       />
+      {id && (
+        <p className="mt-3 text-sm">
+          <Link className="text-brand-700 underline" to={`/applications/${id}`}>
+            Open the application detail page to review it
+          </Link>
+        </p>
+      )}
     </div>
   )
 }

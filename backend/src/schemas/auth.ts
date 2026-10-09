@@ -18,7 +18,9 @@ export const loginSchema = z.object({
 
 export const refreshSchema = z.object({
   body: z.object({
-    refresh_token: z.string().min(1),
+    // Optional: falls back to the HttpOnly refresh cookie when absent,
+    // which is how the browser silently refreshes (no body token needed).
+    refresh_token: z.string().min(1).optional(),
   }),
 });
 

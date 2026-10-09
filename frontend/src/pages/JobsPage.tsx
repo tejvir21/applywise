@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { EmptyState } from '@/components/EmptyState'
 import { MatchExplanation, MatchScoreBadge } from '@/components/MatchExplanation'
 import { PageHeader } from '@/components/PageHeader'
 import { useJobMatches } from '@/hooks/useJobMatches'
 import { getJobMatchExplanation } from '@/services/jobs'
+import { ApiClientError } from '@/types/api'
 import type { JobMatchExplanation } from '@/types/api'
 
 export function JobsPage() {
@@ -73,10 +75,26 @@ export function JobsPage() {
       {isError && (
         <div role="alert" className="rounded-xl border border-red-300 bg-red-50 px-6 py-8 text-center">
           <h2 className="text-sm font-semibold text-red-900">Could not load matches</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-red-700">
-            {error instanceof Error ? error.message : 'Unknown error'} Sign in and complete your
-            profile to see ranked matches.
-          </p>
+          {error instanceof ApiClientError && error.status === 401 && (
+            <p className="mx-auto mt-2 max-w-md text-sm text-red-700">
+              Your session expired. <Link className="underline" to="/login">Sign in again</Link>, then
+              come back — the page retries automatically after refresh.
+            </p>
+          )}
+          {error instanceof ApiClientError && error.code === 'NOT_FOUND' && (
+            <p className="mx-auto mt-2 max-w-md text-sm text-red-700">
+              Matching needs a candidate profile first.{' '}
+              <Link className="underline" to="/profile">
+                Create your profile
+              </Link>{' '}
+              to see ranked matches.
+            </p>
+          )}
+          {!(error instanceof ApiClientError && (error.status === 401 || error.code === 'NOT_FOUND')) && (
+            <p className="mx-auto mt-2 max-w-md text-sm text-red-700">
+              {error instanceof Error ? error.message : 'Unknown error'}
+            </p>
+          )}
           <button
             type="button"
             onClick={() => refetch()}

@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge'
 import { MaterialsEditor } from '@/components/MaterialsEditor'
 import { PageHeader } from '@/components/PageHeader'
+import { SubmissionReadiness } from '@/components/SubmissionReadiness'
 import { useApplication, useApplicationEvents } from '@/hooks/useApplications'
 import {
   cancelApplication,
@@ -184,6 +185,14 @@ export function ApplicationDetailPage() {
       <p className="mt-2 text-xs text-slate-500">
         Approval records a decision only — nothing is submitted from this page.
       </p>
+
+      <SubmissionReadiness
+        applicationId={id}
+        status={app.status}
+        onChanged={() => {
+          void application.refetch()
+        }}
+      />
 
       <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
         <h2 className="text-sm font-semibold text-slate-900">Audit history</h2>

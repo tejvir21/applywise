@@ -2,7 +2,7 @@
 
 Production-oriented job search assistant for a single candidate workflow: discover jobs, match them against a real profile and resume, generate truthful application materials, and submit only after explicit human approval.
 
-This repository is a monorepo. **Phases 1–7 are implemented and verified:** foundation, JWT authentication, candidate profile + resume parsing, job management, deterministic job matching, application management with review/approval, and AI-generated application drafts (mock + local Ollama providers). Platform integrations and browser automation are not built yet.
+This repository is a monorepo. **Phases 1–8 are implemented and verified:** foundation, JWT authentication, candidate profile + resume parsing, job management, deterministic job matching, application management with review/approval, AI-generated application drafts, and the multi-platform integration foundation (capability registry, fail-closed submission policy, safe handoff; no real submission anywhere). Browser automation is not built.
 
 Internal project name: `ai-job-application-agent`
 
@@ -12,15 +12,16 @@ Internal project name: `ai-job-application-agent`
 - Express + TypeScript API with configuration, structured logging, MongoDB lifecycle, CORS, and consistent error envelopes
 - `GET /api/health` and `GET /api/health/live`
 - `POST /api/auth/register`, `/login`, `/refresh`, `/logout`, `GET /api/auth/me`
-- JWT access + refresh tokens with bcrypt password hashing
+- JWT access + rotating refresh tokens with bcrypt password hashing; refresh sessions are server-tracked (logout/rotation revoke, replays rejected); browser sessions persist via HttpOnly cookies
 - Rate limiting on auth endpoints
-- Candidate profile + preferences API with completeness reporting
-- Resume upload (PDF/DOCX), parsing, analysis, and profile import
+- Candidate profile + preferences API with completeness reporting (no web editor yet)
+- Resume upload (multipart PDF/DOCX up to 10 MB, content-verified), local parsing, analysis with failure capture, and non-overwriting profile import; production needs durable storage at `RESUME_STORAGE_PATH`
 - Job management: manual entries, deterministic mock imports, search/filter/sort/pagination, save/unsave, ownership-checked update/soft-delete, duplicate prevention via unique `normalizedKey` and partial `(sources.name, sources.sourceJobId)` indexes
 - Deterministic job matching: 0–100 fit score with per-factor explanations, missing-data reporting, and hard eligibility flags (excluded company/type); ranked listing with minimum-score filter; no AI provider involved
 - Application management: persistent drafts with match/job snapshots, explicit state machine (DRAFT → READY_FOR_REVIEW/AWAITING_APPROVAL → APPROVED, CANCELLED branches), review/approval/rejection/cancellation with unverified-answer confirmations, per-user duplicate protection, and audit history; no submission engine
 - AI-generated drafts: provider abstraction with deterministic mock (default) and local Ollama support; cover letters, tailored resume drafts, and answers built only from verified data with code-enforced honesty guards, provenance tracking, and review workflows; original resume never modified
-- React + TypeScript + Vite shell with routes (dashboard, jobs, applications placeholders, profile, resume, settings), layout, and API client
+- Platform foundation: researched capability matrix (no verified submission path on any requested platform), separate discovery/submission adapter contracts, labeled mock submission adapter for tests only, fail-closed policy evaluation, user-scoped submission settings, and safe handoff (approved → manual completion, never submitted)
+- React + TypeScript + Vite app with working sign-in, jobs matching, resume management, job detail, applications list + detail/review, and platform readiness UI (profile/preferences pages have no web editor yet)
 - Local development that runs **without** a paid AI provider
 - Documentation for architecture, security, development, and the current API
 
@@ -81,4 +82,4 @@ npm run build
 
 ## Next step
 
-Submission-policy engine (auto vs. approval decisions, limits, confirmations), then platform adapters with verified authorizations. No real submissions or automation until policy enforcement exists and is tested.
+Verification of a first real platform integration (only with documented authorization), then browser automation strictly within permitted workflows. No submission claims until end-to-end verification exists.

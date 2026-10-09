@@ -84,8 +84,9 @@ describe('auth store', () => {
     expect(useAuthStore.getState().accessToken).toBe('token-123')
     expect(useAuthStore.getState().email).toBe('a@b.c')
 
-    useAuthStore.getState().logout()
+    await useAuthStore.getState().logout()
     expect(useAuthStore.getState().accessToken).toBeNull()
+    expect(useAuthStore.getState().status).toBe('signed-out')
   })
 
   it('surfaces login failures without storing a token', async () => {

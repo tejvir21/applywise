@@ -24,6 +24,10 @@ import {
   getAuditHistory,
 } from '../services/ApplicationService.js';
 import {
+  evaluateApplicationPolicy,
+  requestHandoff,
+} from '../services/PlatformService.js';
+import {
   generateCoverLetter,
   generateResumeDraft,
   generateAnswer,
@@ -33,7 +37,7 @@ import {
 } from '../services/MaterialGenerationService.js';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { NotFoundError } from '../utils/errors.js';
+import { NotFoundError, ValidationError } from '../utils/errors.js';
 
 const router = Router();
 
@@ -151,6 +155,35 @@ router.post('/:id/cancel', validate(applicationIdParamSchema), async (req: Authe
   const applicationId = getParamId(req.params);
   assertValidObjectId(applicationId);
   const result = await cancelApplication(getUserId(req), applicationId);
+  res.json({ success: true, data: result });
+});
+
+/**
+ * POST /api/applications/:id/policy
+ * Evaluate the authorization-aware submission policy for a platform.
+ * Decides only; performs no submission and changes no state.
+ */
+router.post('/:id/policy', validate(applicationIdParamSchema), async (req: AuthenticatedRequest, res: Response) => {
+  const applicationId = getParamId(req.params);
+  assertValidObjectId(applicationId);
+  const platform = typeof req.body?.platform === 'string' ? req.body.platform : '';
+  if (!platform) {
+    throw new ValidationError('A platform is required', { platform });
+  }
+  const result = await evaluateApplicationPolicy(getUserId(req), applicationId, platform);
+  res.json({ success: true, data: result });
+});
+
+/**
+ * POST /api/applications/:id/handoff
+ * Safe user handoff for APPROVED applications: records the handoff, moves to
+ * NEEDS_MANUAL_ACTION, and returns the platform URL plus instructions.
+ * Opening the page never marks anything submitted.
+ */
+router.post('/:id/handoff', validate(applicationIdParamSchema), async (req: AuthenticatedRequest, res: Response) => {
+  const applicationId = getParamId(req.params);
+  assertValidObjectId(applicationId);
+  const result = await requestHandoff(getUserId(req), applicationId);
   res.json({ success: true, data: result });
 });
 

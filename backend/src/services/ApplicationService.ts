@@ -6,10 +6,15 @@
  * DRAFT -> AWAITING_APPROVAL  (request-review, mode 'permission')
  * READY_FOR_REVIEW -> AWAITING_APPROVAL | APPROVED | DRAFT | CANCELLED
  * AWAITING_APPROVAL -> APPROVED | DRAFT | CANCELLED
- * APPROVED -> SUBMITTING | CANCELLED
+ * APPROVED -> SUBMITTING | NEEDS_MANUAL_ACTION | CANCELLED
  * SUBMITTING -> SUBMITTED | FAILED | NEEDS_MANUAL_ACTION | CANCELLED
  * FAILED | NEEDS_MANUAL_ACTION -> CANCELLED
  * SUBMITTED | CANCELLED -> (terminal)
+ *
+ * NEEDS_MANUAL_ACTION is the safe-handoff state: an approved application
+ * whose platform has no authorized automatic path moves here (system actor)
+ * with completion instructions, and waits for the candidate to act on the
+ * platform's own pages.
  *
  * SUBMITTING / SUBMITTED / FAILED / NEEDS_MANUAL_ACTION are system-actor
  * states: no Phase 6 user endpoint transitions into them, and user-actor
@@ -49,7 +54,7 @@ export const APPLICATION_TRANSITIONS: Record<ApplicationStatus, ApplicationStatu
   DRAFT: ['READY_FOR_REVIEW', 'AWAITING_APPROVAL', 'CANCELLED'],
   READY_FOR_REVIEW: ['AWAITING_APPROVAL', 'APPROVED', 'DRAFT', 'CANCELLED'],
   AWAITING_APPROVAL: ['APPROVED', 'DRAFT', 'CANCELLED'],
-  APPROVED: ['SUBMITTING', 'CANCELLED'],
+  APPROVED: ['SUBMITTING', 'NEEDS_MANUAL_ACTION', 'CANCELLED'],
   SUBMITTING: ['SUBMITTED', 'FAILED', 'NEEDS_MANUAL_ACTION', 'CANCELLED'],
   SUBMITTED: [],
   FAILED: ['CANCELLED'],
