@@ -1,0 +1,50 @@
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Python
+backend/.venv/
+backend/venv/
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.vite/
+backend/node_modules/
+backend/dist/
+backend/coverage/
+backend/.vite/
+
+# Storage (local file uploads)
+backend/storage/uploads/*
+!backend/storage/uploads/.gitkeep
+backend/var/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Playwright
+frontend/playwright-report/
+frontend/test-results/
+backend/.playwright/
