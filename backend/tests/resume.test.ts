@@ -67,6 +67,12 @@ describe('Resumes (Phase 8.1)', () => {
 
   beforeAll(async () => {
     storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'applywise-resume-test-'));
+    // Hermetic disk assertions: this suite verifies files on local disk, so
+    // pin the local provider regardless of the developer's .env (which may
+    // point at Supabase). Resilient/Supabase paths are covered in
+    // storage.resilient.test.ts.
+    process.env.STORAGE_PROVIDER = 'local';
+    process.env.RESUME_STORAGE_FALLBACK = 'none';
     process.env.RESUME_STORAGE_PATH = storageDir;
     // Re-read config AFTER overriding the env: the app factory caches config
     // at import time, and without this uploads would land in the default path.

@@ -77,7 +77,7 @@ Phases 1–6 are implemented: process/config/logging/health/MongoDB/auth (JWT), 
 
 - **AIProvider**: `mock` (default), `openai`, `ollama`. Never call a provider unless configured. Validate all model JSON against schemas. Do not write application state from unvalidated model output.
 - **JobSourceAdapter**: `manual`, `mock`, then legitimate APIs. Respect terms of service. Deduplicate on `source + sourceJobId`.
-- **StorageProvider**: `local` in development; S3/Cloudinary later. No public resume URLs by default.
+- **StorageProvider**: `supabase` (preferred, private bucket, service-role key server-side only) with explicit persistent `local` fallback (`RESUME_STORAGE_FALLBACK=local` + absolute `RESUME_STORAGE_PATH` on a mounted disk); `local` alone in development. No public resume URLs by default. Startup fails clearly when no safe provider exists; runtime failover is bounded (timeout + small retry budget, exists-check on ambiguous timeouts) and recorded per resume.
 - **BrowserAutomationProvider**: `mock` in tests; Playwright isolated in Phase 9. Must pause on CAPTCHA/MFA. Must never bypass security controls.
 
 ## Application workflow (later)

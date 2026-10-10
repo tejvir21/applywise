@@ -13,6 +13,7 @@ export interface CreateResumeData {
   mimeType: string;
   fileSize: number;
   storageKey: string;
+  storageProvider?: 'local' | 'supabase';
   status?: string;
   version?: number;
   isDefault?: boolean;
@@ -22,6 +23,7 @@ export interface UpdateResumeData {
   status?: ResumeStatus;
   isDefault?: boolean;
   version?: number;
+  storageProvider?: 'local' | 'supabase';
   [key: string]: unknown;
 }
 

@@ -1,0 +1,44 @@
+Chirag Pandit
+UI/UX Designer
+Noida, India
+chirag.pandit09@example.com
++91 9876543210
+linkedin.com/in/chiragpandit09
+github.com/chiragp-design
+https://chiragpandit.design
+
+Professional Summary
+UI/UX Designer with 4 years of experience crafting responsive web and mobile
+interfaces. Strong focus on usability testing and design systems.
+
+Technical Skills
+Figma, Webflow, Adobe XD, Photoshop, Illustrator, HTML, CSS, JavaScript,
+React.js, react, Node.js, MERN, User Research, Wireframing, Prototyping,
+Team Collaboration, Landing Page, Noida June 3, pandit09 2021, Gym Web Page,
+MERN Pay, App, 2025 2020, 2021 2018, css
+
+Experience
+UI/UX Designer - PixelWorks Studio, Noida
+June 2021 - Present
+Designed landing pages and a gym web page using Figma and Webflow.
+Ran usability testing sessions with clients.
+
+Junior Designer - WebCraft Agency, Delhi
+2018 - 2021
+Built marketing pages with HTML, CSS and JavaScript.
+
+Projects
+Gym Web Page
+A responsive gym website built with Webflow and JavaScript. 2025 Team
+Collaboration project with three designers.
+https://github.com/chiragp-design/gym-web-page
+
+Landing Page Redesign
+Portfolio piece showcasing prototyping and visual design.
+
+Education
+Bachelor of Design
+National Institute of Design, 2018
+
+Certifications
+Google UX Design Certificate issued by Coursera

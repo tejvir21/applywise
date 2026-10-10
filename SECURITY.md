@@ -23,11 +23,12 @@ Every profile, resume, job-match, and application query must be scoped to the au
 
 ## Files (Phase 4)
 
-- Allow-list MIME/types (PDF, DOCX)
-- Size limits
-- Safe stored filenames
-- Path traversal protection
-- Private storage; no public resume URLs by default
+- Allow-list MIME/types (PDF, DOCX) with magic-byte sniffing (never trust client MIME alone); 10 MB default limit
+- Safe stored filenames: opaque server-generated keys (`<userId>/<random-hex>.<ext>`), strict key allow-list, path traversal protection, no arbitrary bucket/object selection
+- Private storage; no public resume URLs by default. Supabase bucket must be private; the service-role key is server-side only (Authorization header, never logged, never returned). Direct `getUrl()` is disabled — downloads stream through the authenticated `GET /api/resumes/:id/download` route.
+- Ownership enforced on upload, read, analysis, download, and deletion (JWT + `findByIdAndUserId` scoping)
+- Uploads report success only after storage + required MongoDB writes succeed; failed uploads clean up stored bytes (from the actual provider) and partial documents. No auto-migration between providers; per-resume provider affinity on every read/delete.
+- Health responses carry sanitized storage metadata only (provider names + booleans; no secrets, paths, or URLs). Never log resume content.
 
 ## AI (Phase 7)
 

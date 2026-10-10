@@ -19,6 +19,13 @@ export type CandidateProfile = {
   currentJobTitle?: string
   currentCompany?: string
   skills: Array<{ _id?: string; name: string; level?: string; years?: number }>
+  socialLinks?: {
+    github?: string
+    linkedin?: string
+    portfolio?: string
+    website?: string
+    other?: string[]
+  }
 }
 
 export type JobPreferences = {

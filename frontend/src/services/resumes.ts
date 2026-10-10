@@ -1,5 +1,5 @@
 import { resumeAnalysisSchema, resumeListItemSchema, resumeUploadSchema } from '@/schemas/resumes'
-import { apiDelete, apiGet, apiPost, apiUpload } from '@/services/api'
+import { apiDelete, apiDownload, apiGet, apiPost, apiUpload } from '@/services/api'
 
 export type ResumeListItem = {
   id: string
@@ -50,4 +50,69 @@ export async function analyzeResume(id: string): Promise<{ success: boolean; ana
 export async function getResumeAnalysis(id: string): Promise<ResumeAnalysis> {
   const data = await apiGet<unknown>(`/api/resumes/${id}/analysis`)
   return resumeAnalysisSchema.parse(data) as ResumeAnalysis
+}
+
+export async function retryResumeAnalysis(id: string): Promise<{ success: boolean; analysisId: string }> {
+  const data = await apiPost<unknown>(`/api/resumes/${id}/analysis/retry`)
+  return data as { success: boolean; analysisId: string }
+}
+
+export interface ResumeImportResult {
+  imported: string[]
+  skipped: string[]
+  conflicts: string[]
+  applied: string[]
+  removed: string[]
+}
+
+export type ImportMode = 'fill' | 'select' | 'review'
+
+export interface ResumeImportOptions {
+  excludeSkills?: string[]
+  includeReview?: string[]
+  mode?: ImportMode
+  skillsMode?: 'merge' | 'replace'
+  removeSkills?: string[]
+  expected?: Record<string, unknown>
+  confirmReplace?: boolean
+}
+
+export type AnalyzedSkill = {
+  name: string
+  confidence?: string
+  source?: string
+  evidence?: string
+  section?: string
+  method?: string
+  reviewStatus?: string
+  rating?: string
+  category?: string
+  proficiency?: string
+}
+
+export type ReviewCandidate = {
+  text: string
+  reason: string
+  section?: string
+}
+
+export async function importResumeToProfile(
+  id: string,
+  fields: string[],
+  opts: ResumeImportOptions = {},
+): Promise<ResumeImportResult> {
+  const body: Record<string, unknown> = { fields }
+  for (const key of ['excludeSkills', 'includeReview', 'mode', 'skillsMode', 'removeSkills', 'expected', 'confirmReplace'] as const) {
+    const value = opts[key]
+    if (value !== undefined && !(Array.isArray(value) && value.length === 0)) {
+      body[key] = value
+    }
+  }
+  const data = await apiPost<unknown>(`/api/resumes/${id}/import`, body)
+  return data as ResumeImportResult
+}
+
+/** Binary download of the stored file via the authenticated backend route. */
+export async function downloadResumeFile(id: string): Promise<{ blob: Blob; filename: string; contentType: string }> {
+  return apiDownload(`/api/resumes/${id}/download`)
 }

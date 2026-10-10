@@ -1,0 +1,55 @@
+Aarav Mehta
+UI/UX Designer
+123 Anywhere St., Any City, ST 12345
++91 98765 43210
++91 98765 43210
+aarav.mehta@example.com
+
+Summary
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua.
+
+Skills
+UI/UX 95%
+Wireframes 90%
+Storyboards 88%
+User Flows 92%
+Process Flows 85%
+Visual Design 87%
+
+Experience
+Senior UI Designer - BrightPixel Studio, Mumbai
+2022 - Present
+Lead the design system migration in Figma. Ran usability testing.
+
+UI Designer - BrightPixel Studio, Mumbai
+2020 - 2022
+Prototyping and user flows for client dashboards.
+
+Junior Designer - WebKraft Agency, Delhi
+2019 - 2020
+Wireframes and mockups for marketing sites.
+
+Design Intern - WebKraft Agency, Delhi
+2018 - 2019
+Lorem ipsum dolor sit amet.
+
+Education
+B.Des Communication Design
+National Institute of Design
+2014 - 2018
+
+B.Des Communication Design
+National Institute of Design
+2014 - 2018
+
+M.Des Interaction Design
+IIT Bombay
+2018 - 2020
+
+Diploma in Graphic Design
+NIFT Delhi
+2020 - 2021
+
+Certifications
+Google UX Design Certificate issued by Coursera

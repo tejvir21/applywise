@@ -87,6 +87,34 @@ export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
   return parseResponse<T>(response);
 }
 
+export interface DownloadResult {
+  blob: Blob;
+  filename: string;
+  contentType: string;
+}
+
+/** Binary download through the shared auth/refresh pipeline. Used for private
+ *  resume files served by the authenticated backend route — never a direct
+ *  storage URL. Error envelopes are JSON and surface as ApiClientError. */
+export async function apiDownload(path: string): Promise<DownloadResult> {
+  const response = await fetchWithAuthRetry(`${API_BASE_URL}${path}`, {
+    method: "GET",
+    headers: withAuthHeader({ Accept: "*/*" }),
+  });
+  if (!response.ok) {
+    await parseResponse<unknown>(response).catch((err) => {
+      throw err;
+    });
+    throw new ApiClientError("DOWNLOAD_FAILED", "Download failed", response.status);
+  }
+  const blob = await response.blob();
+  const contentType = response.headers.get("Content-Type") ?? blob.type ?? "application/octet-stream";
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+  const filename = decodeURIComponent(match?.[1] ?? match?.[2] ?? "download");
+  return { blob, filename, contentType };
+}
+
 // Access token holder, wired by the auth store. The token lives only in
 // memory (never localStorage) and is never logged.
 let accessToken: string | null = null;

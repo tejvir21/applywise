@@ -1,0 +1,41 @@
+Rohan Iyer
+Civil Site Engineer
+rohan.iyer@example.com
++91 9812345678
+Pune, Maharashtra, India
+
+Summary
+Civil engineer with 3 years of site execution experience on residential and
+commercial projects. Hands-on with AutoCAD drawings, STAAD Pro models, bar
+bending schedules, and quantity estimation. Familiar with soil testing
+procedures and concrete cube testing.
+
+Education
+B.E. Civil Engineering
+Pune University
+2017 - 2021
+Coursework: Structural Analysis, RCC Design, Soil Mechanics, Fluid Mechanics,
+Transportation Engineering, Estimation and Costing. Graduated with distinction.
+
+Academic Projects
+Low-cost housing survey camp
+Conducted chain surveying and levelling for a rural housing layout. Prepared
+AutoCAD site plans and estimation sheets.
+
+Seismic response study
+Modelled a G+5 frame in STAAD Pro and ETABS. Compared base shear results.
+
+Industrial Training
+Site Execution Trainee - Sharma Constructions, Pune
+June 2020 - December 2020
+Assisted with site execution, quantity estimation, and quality control checks
+for concrete work.
+
+Experience
+Site Engineer - Sharma Constructions, Pune
+2021 - Present
+Supervising RCC work, checking bar bending schedules, coordinating with
+contractors. Used Primavera for project planning.
+
+Certifications
+AutoCAD Certified Professional issued by Autodesk

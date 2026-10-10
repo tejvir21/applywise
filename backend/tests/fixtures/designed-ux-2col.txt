@@ -1,0 +1,22 @@
+Kabir Shah  CONTACT
+UI/UX Designer  kabir.shah@example.com
+Mumbai, India  +91 9820011223
+
+SKILLS  LANGUAGES
+UI/UX 95%  English Fluent
+Wireframes 90%  Hindi Native
+Storyboards 88%
+User Flows 92%
+Process Flows 85%
+Visual Design 87%  EDUCATION
+Figma  B.Des Communication Design
+  National Institute of Design, 2018 - 2022
+
+EXPERIENCE  PROJECTS
+Product Designer - BrightApps, Mumbai  Transit App Redesign
+2021 - Present  Prototyping and usability testing
+Led checkout revamp in Figma  with Maze.
+
+Product Design Intern - BrightApps, Mumbai
+2020 - 2021
+Wireframes and mockups for onboarding.

@@ -25,6 +25,16 @@ export type HealthData = {
   ai_provider: string
   storage_provider: string
   browser_automation_provider: string
+  /** Sanitized storage topology (provider names + booleans only). */
+  storage?: {
+    active: string
+    primary: string
+    fallback: string
+    healthy: boolean
+    durable: boolean
+    degraded: boolean
+    reason?: string
+  }
 }
 
 export class ApiClientError extends Error {
