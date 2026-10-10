@@ -145,6 +145,13 @@ export function ProfilePage() {
       {!profileQuery.isPending && !profileQuery.isError && (
         <>
           <div className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+            <p className="font-semibold text-slate-900">Resumes</p>
+            <p>
+              Upload and manage your resume files on the{' '}
+              <Link className="text-brand-700 underline" to="/resumes">Resumes page</Link>.
+            </p>
+          </div>
+          <div className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
             <p className="font-semibold text-slate-900">Needed for meaningful matching</p>
             <p>
               First and last name are required. Skills, years of experience, target roles, and location

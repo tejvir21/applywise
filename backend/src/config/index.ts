@@ -30,9 +30,22 @@ const envSchema = z.object({
   OLLAMA_MODEL: z.string().default("llama3.1:8b"),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300000).default(30000),
 
-  // File storage
-  STORAGE_PROVIDER: z.enum(["local", "s3", "cloudinary"]).default("local"),
+  // File storage. Supabase is the preferred provider in production; local
+  // filesystem remains for development/tests and as an explicit persistent
+  // fallback (Render disk). Supabase credentials are NOT required when local
+  // storage is deliberately selected.
+  STORAGE_PROVIDER: z.enum(["local", "supabase"]).default("local"),
   LOCAL_STORAGE_PATH: z.string().default("./storage/uploads"),
+  // Explicit opt-in fallback used only when the primary fails at runtime or
+  // is misconfigured at startup. "none" disables failover.
+  RESUME_STORAGE_FALLBACK: z.enum(["local", "none"]).default("none"),
+  // Supabase Storage (preferred). Required only when STORAGE_PROVIDER=supabase.
+  SUPABASE_URL: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  SUPABASE_RESUME_BUCKET: z.string().default("resumes"),
+  // Bounded resilience for transient Supabase failures.
+  SUPABASE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(8000),
+  SUPABASE_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
 
   // Browser automation
   BROWSER_AUTOMATION_PROVIDER: z.enum(["mock", "playwright"]).default("mock"),

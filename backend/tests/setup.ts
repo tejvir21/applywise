@@ -8,6 +8,16 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 config({ path: '.env', override: true });
 process.env.NODE_ENV = 'test';
 process.env.LOG_LEVEL = 'error';
+// Test-only credentials at module scope (before any app import validates
+// config at load time). Overridden with the same values in beforeAll.
+process.env.JWT_ACCESS_SECRET ??= 'test-access-secret-32-characters-minimum';
+process.env.JWT_REFRESH_SECRET ??= 'test-refresh-secret-32-characters-minimum';
+if ((process.env.JWT_ACCESS_SECRET ?? '').length < 32) {
+  process.env.JWT_ACCESS_SECRET = 'test-access-secret-32-characters-minimum';
+}
+if ((process.env.JWT_REFRESH_SECRET ?? '').length < 32) {
+  process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-32-characters-minimum';
+}
 
 // Reset config cache to pick up test env vars
 import { resetConfigCache } from '../src/config/index.js';

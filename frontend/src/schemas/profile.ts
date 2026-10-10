@@ -27,6 +27,15 @@ export const profileSchema = z.object({
   currentJobTitle: z.string().optional(),
   currentCompany: z.string().optional(),
   skills: z.array(skillSchema).optional().default([]),
+  socialLinks: z
+    .object({
+      github: z.string().optional(),
+      linkedin: z.string().optional(),
+      portfolio: z.string().optional(),
+      website: z.string().optional(),
+      other: z.array(z.string()).optional(),
+    })
+    .optional(),
   experience: z.array(z.unknown()).optional().default([]),
   education: z.array(z.unknown()).optional().default([]),
   certifications: z.array(z.unknown()).optional().default([]),

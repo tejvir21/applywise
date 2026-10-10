@@ -132,6 +132,7 @@ describe('ResumePage', () => {
 
   it('deletes a resume and refreshes the list', async () => {
     const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
     stubFetch({ success: true, data: RESUME_LIST })
     renderWithProviders('/profile/resume')
     await screen.findByText('resume.pdf')

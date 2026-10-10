@@ -186,10 +186,18 @@ router.post('/:id/analysis/retry', validate(resumeIdParamSchema), async (req: Au
 
 /**
  * POST /api/resumes/:id/import
- * Import extracted data to profile
+ * Import extracted data to profile (fill / selective / review modes).
  */
 router.post('/:id/import', validate(importToProfileSchema), async (req: AuthenticatedRequest, res: Response) => {
-  const result = await importToProfile(getUserId(req), getParamId(req.params), req.body.fields);
+  const result = await importToProfile(getUserId(req), getParamId(req.params), req.body.fields, {
+    excludeSkills: req.body.excludeSkills,
+    includeReview: req.body.includeReview,
+    mode: req.body.mode,
+    skillsMode: req.body.skillsMode,
+    removeSkills: req.body.removeSkills,
+    expected: req.body.expected,
+    confirmReplace: req.body.confirmReplace,
+  });
   res.json({ success: true, data: result });
 });
 

@@ -9,6 +9,13 @@ describe('Configuration', () => {
   });
 
   it('loads defaults correctly', () => {
+    // Schema defaults only apply when the environment does not override
+    // them; a developer .env (e.g. STORAGE_PROVIDER=supabase) must not leak
+    // into this assertion.
+    delete process.env.STORAGE_PROVIDER;
+    delete process.env.AI_PROVIDER;
+    delete process.env.BROWSER_AUTOMATION_PROVIDER;
+    resetConfigCache();
     const cfg = getConfig();
 
     expect(cfg.NODE_ENV).toBe('test');

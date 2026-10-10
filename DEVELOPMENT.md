@@ -25,8 +25,15 @@ Copy [`.env.example`](./.env.example) to `backend/.env` (and optionally the repo
 | `AI_PROVIDER` | `mock` / `openai` / `ollama` | `mock` |
 | `OPENAI_API_KEY` | External AI (unused in Phase 1) | empty |
 | `OLLAMA_BASE_URL` | Local model host | `http://127.0.0.1:11434` |
-| `STORAGE_PROVIDER` | `local` / `s3` / `cloudinary` | `local` |
+| `STORAGE_PROVIDER` | `local` / `supabase` | `local` |
 | `LOCAL_STORAGE_PATH` | Local file upload path | `./storage/uploads` |
+| `RESUME_STORAGE_FALLBACK` | `local` (explicit persistent fallback) / `none` | `none` |
+| `RESUME_STORAGE_PATH` | Persistent local dir (absolute mount path in prod) | `./storage/uploads` |
+| `SUPABASE_URL` | Supabase project URL (https, required for `supabase`) | empty |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (server-side only) | empty |
+| `SUPABASE_RESUME_BUCKET` | Private Supabase bucket for resumes | `resumes` |
+| `SUPABASE_TIMEOUT_MS` | Per-request timeout for Supabase (ms) | `8000` |
+| `SUPABASE_MAX_RETRIES` | Retry budget for transient Supabase failures | `2` |
 | `BROWSER_AUTOMATION_PROVIDER` | `mock` / `playwright` | `mock` |
 | `VITE_API_BASE_URL` | Frontend API origin (bare origin, NO `/api` suffix — all client paths already start with `/api`) | empty (= Vite proxy) |
 
@@ -83,7 +90,11 @@ Atlas is supported by changing `MONGODB_URI`.
 Backend (Render web service, Node 20+):
 - `NODE_ENV=production`, `PORT` as provided, `MONGODB_URI` (Atlas), long random `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` (startup refuses `change-me` placeholders).
 - `CLIENT_URL=https://<your-vercel-app>.vercel.app` — the exact frontend origin, no wildcard. CORS allows credentials only for these origins.
-- `RESUME_STORAGE_PATH` must point at durable storage: mount a Render disk at that path. Without a disk, uploads land on ephemeral filesystem and vanish on redeploy/restart. `STORAGE_PROVIDER` stays `local`; `s3`/`cloudinary` are not implemented and fail requests clearly.
+- Resume storage (Supabase preferred, persistent local fallback):
+  - Preferred: `STORAGE_PROVIDER=supabase`, `SUPABASE_URL=https://<project>.supabase.co`, `SUPABASE_SERVICE_ROLE_KEY=<service-role key, server-side only — never expose to the frontend>`, `SUPABASE_RESUME_BUCKET=resumes`. Create the bucket in the Supabase dashboard as **private** (never public); the backend uses only authenticated `/storage/v1/object/...` endpoints and never mints public or signed URLs. Uploads use a bounded timeout (`SUPABASE_TIMEOUT_MS`, default 8000) with a small retry budget (`SUPABASE_MAX_RETRIES`, default 2); ambiguous timeouts are resolved with an existence check before any fallback to avoid duplicates/orphans.
+  - Fallback (explicit opt-in): `RESUME_STORAGE_FALLBACK=local` **only** when `RESUME_STORAGE_PATH` is an absolute path on a mounted persistent disk (Render dashboard → Disks → mount at e.g. `/var/data`, then `RESUME_STORAGE_PATH=/var/data/resumes`). Local fallback is safe **only** when persistent storage is actually configured — relative paths, `./storage/uploads`, and tmp directories are ephemeral and rejected at startup in production.
+  - Startup refuses to boot in production when Supabase credentials are missing/invalid and no durable fallback is configured, instead of silently using ephemeral storage. `GET /api/health` reports sanitized storage status (`active`/`primary`/`fallback`/`healthy`/`durable`, no secrets or paths).
+  - Legacy resume documents without `storageProvider` default to `local` (all pre-Supabase versions were local-only). Run `node scripts/backfill-resume-storage-provider.mjs --dry-run` (then without the flag) to make the default explicit. Unrecognized provider values fail reads/deletes with 409 for reconciliation — files are never auto-migrated or auto-deleted.
 - Cookies in production are `HttpOnly`, `Secure`, `SameSite=None`, path `/api/auth` — requires HTTPS on the backend (Render provides it).
 
 Frontend (Vercel static):

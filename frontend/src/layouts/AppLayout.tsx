@@ -1,6 +1,7 @@
 import {
   Briefcase,
   FileText,
+  FileUp,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/jobs', label: 'Jobs', icon: Briefcase },
   { to: '/applications', label: 'Applications', icon: FileText },
+  { to: '/resumes', label: 'Resumes', icon: FileUp },
   { to: '/profile', label: 'Profile', icon: UserRound },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]

@@ -14,6 +14,7 @@ import { PreferencesPage } from '@/pages/PreferencesPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { ResumePage } from '@/pages/ResumePage'
+import { ResumesPage } from '@/pages/ResumesPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
 export const router = createBrowserRouter([
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
       { path: '/applications/:id', element: <ApplicationDetailPage /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: '/profile/resume', element: <ResumePage /> },
+      { path: '/resumes', element: <ResumesPage /> },
       { path: '/profile/preferences', element: <PreferencesPage /> },
       { path: '/settings', element: <SettingsPage /> },
       { path: '*', element: <NotFoundPage /> },

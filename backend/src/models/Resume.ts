@@ -17,12 +17,37 @@ export interface IPersonalInfo {
   email?: string;
   phone?: string;
   location?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  /** Original location line as written on the resume. */
+  locationEvidence?: string;
 }
 
 export interface ISkillExtracted {
   name: string;
   confidence?: ConfidenceLevel;
   source?: string;
+  /** Snippet of resume text evidencing the skill. */
+  evidence?: string;
+  /** Section the evidence came from. */
+  section?: string;
+  /** How it was found: skills_list | dictionary_match | review_approved. */
+  method?: string;
+  /** Verified dictionary skills only; uncertain terms live in reviewCandidates. */
+  reviewStatus?: 'verified' | 'needs_review';
+  /** Source-printed rating (e.g. "90%"): evidence only, never proficiency. */
+  rating?: string;
+  /** technical | design | soft | language | domain | coursework. */
+  category?: string;
+  /** Stated language proficiency (e.g. "Fluent"): analysis-only, never a level. */
+  proficiency?: string;
+}
+
+export interface IReviewCandidate {
+  text: string;
+  reason: string;
+  section?: string;
 }
 
 export interface IExperienceExtracted {
@@ -32,6 +57,7 @@ export interface IExperienceExtracted {
   endDate?: string;
   current?: boolean;
   description?: string;
+  location?: string;
   technologies?: string[];
   confidence?: ConfidenceLevel;
 }
@@ -44,6 +70,9 @@ export interface IEducationExtracted {
   endDate?: string;
   current?: boolean;
   grade?: string;
+  location?: string;
+  coursework?: string[];
+  honors?: string;
   confidence?: ConfidenceLevel;
 }
 
@@ -79,6 +108,8 @@ export interface IStructuredResumeData {
   personal?: IPersonalInfo;
   summary?: string;
   skills?: ISkillExtracted[];
+  /** Uncertain terms held for human review — never auto-imported as skills. */
+  reviewCandidates?: IReviewCandidate[];
   experience?: IExperienceExtracted[];
   education?: IEducationExtracted[];
   certifications?: ICertificationExtracted[];
@@ -100,6 +131,8 @@ export interface IResume extends Document {
   mimeType: string;
   fileSize: number;
   storageKey: string;
+  /** Backend that holds the bytes. Missing on legacy docs (see below). */
+  storageProvider?: 'local' | 'supabase';
   status: ResumeStatus;
   version: number;
   isDefault: boolean;
@@ -130,6 +163,13 @@ const resumeSchema = new Schema<IResume>(
     mimeType: { type: String, required: true, trim: true },
     fileSize: { type: Number, required: true, min: 0 },
     storageKey: { type: String, required: true, trim: true },
+    // Provider holding the bytes. Optional for backward compatibility:
+    // documents written before Supabase support predate any non-local
+    // backend, so a missing value defaults to 'local' at read time (see
+    // providerNameForRecord). New writes always set this explicitly.
+    // Never backfill an ambiguous value with a guess; unknown values fail
+    // reads/deletes with a 409 for operator reconciliation.
+    storageProvider: { type: String, required: false, enum: ['local', 'supabase'], index: true },
     status: {
       type: String,
       required: true,
@@ -160,6 +200,10 @@ const resumeAnalysisSchema = new Schema<IResumeAnalysis>(
         email: { type: String },
         phone: { type: String },
         location: { type: String },
+        city: { type: String },
+        state: { type: String },
+        country: { type: String },
+        locationEvidence: { type: String },
       },
       summary: { type: String },
       skills: [
@@ -167,6 +211,21 @@ const resumeAnalysisSchema = new Schema<IResumeAnalysis>(
           name: { type: String, required: true },
           confidence: { type: String, enum: ['high', 'medium', 'low', 'uncertain'] },
           source: { type: String },
+          evidence: { type: String },
+          section: { type: String },
+          method: { type: String },
+          reviewStatus: { type: String, enum: ['verified', 'needs_review'], default: 'verified' },
+          // Source-printed rating (e.g. "90%"): evidence only, never proficiency.
+          rating: { type: String },
+          category: { type: String },
+          proficiency: { type: String },
+        },
+      ],
+      reviewCandidates: [
+        {
+          text: { type: String, required: true },
+          reason: { type: String, required: true },
+          section: { type: String },
         },
       ],
       experience: [
@@ -177,6 +236,7 @@ const resumeAnalysisSchema = new Schema<IResumeAnalysis>(
           endDate: { type: String },
           current: { type: Boolean },
           description: { type: String },
+          location: { type: String },
           technologies: [{ type: String }],
           confidence: { type: String, enum: ['high', 'medium', 'low', 'uncertain'] },
         },
@@ -190,6 +250,9 @@ const resumeAnalysisSchema = new Schema<IResumeAnalysis>(
           endDate: { type: String },
           current: { type: Boolean },
           grade: { type: String },
+          location: { type: String },
+          coursework: [{ type: String }],
+          honors: { type: String },
           confidence: { type: String, enum: ['high', 'medium', 'low', 'uncertain'] },
         },
       ],
