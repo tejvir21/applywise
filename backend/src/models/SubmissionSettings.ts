@@ -7,7 +7,7 @@ export type PlatformSubmissionMode = 'auto' | 'permission' | 'disabled';
 export interface IPlatformSetting {
   platform: string;
   mode: PlatformSubmissionMode;
-  /** Whether the user completed that platform's authorization (e.g. OAuth). */
+  /** User consent/configuration only. NOT evidence of actual platform authorization. */
   authorized: boolean;
 }
 

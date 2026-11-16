@@ -100,6 +100,82 @@ export type JobMatchesPage = {
   scanned: number
 }
 
+// ---- Live discovery (GET /api/jobs/search) ----
+
+export type SourceState =
+  | 'connected_with_results'
+  | 'connected_no_matches'
+  | 'not_configured'
+  | 'rate_limited'
+  | 'temporarily_unavailable'
+  | 'blocked_upstream'
+
+export type DiscoveredJob = {
+  dedupeKey: string
+  externalId: string
+  canonicalUrl: string
+  applicationUrl?: string
+  title: string
+  companyName: string
+  location?: string
+  country?: string
+  countryIso?: string
+  remoteType?: string
+  remoteEligibility?: string
+  indiaEligible: boolean
+  employmentType?: string
+  description?: string
+  sourceName: string
+  sourceProvider: string
+  sourceDisplayName: string
+  discoveredViaQuery?: string
+  postedAt?: string
+  updatedAt?: string
+  fetchedAt: string
+  dateConfidence: string
+  isNewWithin7?: boolean
+  olderListing?: boolean
+}
+
+export type DiscoverySourceResult = {
+  sourceName: string
+  sourceProvider: string
+  sourceDisplayName: string
+  state: SourceState
+  fetchedCount: number
+  upstreamTotal?: number
+  pagesFetched: number
+  error?: string
+}
+
+export type DiscoveryFilters = {
+  roles: string
+  location?: string
+  freshness?: 'any' | 'last7' | 'last14' | 'last30'
+  sort?: 'relevance' | 'newest'
+  includeRemote?: boolean
+  includeWorldwideRemote?: boolean
+  countryIso?: string
+  page?: number
+  pageSize?: number
+}
+
+export type DiscoveryPage = {
+  jobs: DiscoveredJob[]
+  totalUnique: number
+  page: number
+  pageSize: number
+  totalPages: number
+  queries: string[]
+  within7Count: number
+  olderCount: number
+  undatedCount: number
+  excluded: { duplicates: number; relevance: number; geo: number; freshness: number }
+  sources: DiscoverySourceResult[]
+  fetchedAt: string
+  hasMore: boolean
+}
+
 export type ApplicationAnswer = {
   question: string
   answer: string

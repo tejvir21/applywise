@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { useHealth } from '@/hooks/useHealth'
@@ -373,7 +374,7 @@ function StorageStatusLine() {
   const storage = data?.storage
   if (!storage) return null
   return (
-    <p className="mb-4 text-xs text-slate-500">
+    <p className="mb-4 text-xs text-ink-500">
       Storage: {storage.active}
       {storage.healthy ? '' : ' (currently unavailable)'}
       {' · '}status snapshot only — it does not confirm any individual upload.
@@ -411,27 +412,27 @@ function AnalysisDetails({
   const linkEntries = linkList(links)
 
   return (
-    <div className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-      <p className="text-xs text-slate-600">
+    <div className="mt-2 space-y-2 rounded-lg border border-line bg-slate-50 px-3 py-2">
+      <p className="text-xs text-ink-600">
         Extraction confidence (evidence-based, not completion-based):{' '}
         <span className="font-medium">{analysis.confidence ?? 'unknown'}</span>
       </p>
 
       {verified.length > 0 ? (
         <div>
-          <p className="text-xs font-medium text-slate-700">Verified skills ({verified.length})</p>
+          <p className="text-xs font-medium text-ink-700">Verified skills ({verified.length})</p>
           <ul aria-label="Verified extracted skills" className="mt-1 space-y-1.5">
             {verified.map((skill) => {
               const isRejected = rejectedSet.has(skill.name.toLowerCase())
               return (
-                <li key={skill.name} className="text-xs text-slate-700">
+                <li key={skill.name} className="text-xs text-ink-700">
                   <span className={isRejected ? 'line-through' : 'font-medium'}>{skill.name}</span>{' '}
                   {skill.category && (
-                    <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-600">
+                    <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] text-ink-600">
                       {skill.category}
                     </span>
                   )}{' '}
-                  <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-600">
+                  <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] text-ink-600">
                     proficiency: not specified
                   </span>{' '}
                   {skill.rating && (
@@ -459,7 +460,7 @@ function AnalysisDetails({
                     {isRejected ? 'Restore' : 'Reject'}
                   </button>
                   {skill.evidence && (
-                    <span className="block text-[11px] text-slate-500">
+                    <span className="block text-[11px] text-ink-500">
                       Evidence ({methodLabel(skill.method, skill.section)}): “{skill.evidence}”
                     </span>
                   )}
@@ -474,7 +475,7 @@ function AnalysisDetails({
           </ul>
         </div>
       ) : (
-        <p className="text-xs text-slate-600">No verified skills extracted.</p>
+        <p className="text-xs text-ink-600">No verified skills extracted.</p>
       )}
 
       {reviewCandidates.length > 0 && (
@@ -487,9 +488,9 @@ function AnalysisDetails({
               const isRejected = rejectedSet.has(candidate.text.toLowerCase())
               const isApproved = approvedSet.has(candidate.text.toLowerCase())
               return (
-                <li key={candidate.text} className="text-xs text-slate-700">
+                <li key={candidate.text} className="text-xs text-ink-700">
                   <span className={isRejected ? 'line-through' : ''}>“{candidate.text}”</span>{' '}
-                  <span className="text-[11px] text-slate-500">— {candidate.reason}</span>{' '}
+                  <span className="text-[11px] text-ink-500">— {candidate.reason}</span>{' '}
                   <button
                     type="button"
                     aria-label={`${isRejected ? 'Restore' : 'Reject'} candidate ${candidate.text}`}
@@ -521,8 +522,8 @@ function AnalysisDetails({
       )}
 
       {(contactParts.length > 0 || locationParts.length > 0 || linkEntries.length > 0) && (
-        <div className="text-xs text-slate-600">
-          <p className="font-medium text-slate-700">Extracted contact & links</p>
+        <div className="text-xs text-ink-600">
+          <p className="font-medium text-ink-700">Extracted contact & links</p>
           {contactParts.length > 0 && <p>Contact: {contactParts.join(' · ')}</p>}
           {locationParts.length > 0 && (
             <p>
@@ -556,7 +557,7 @@ function AnalysisDetails({
 const CHANGE_BADGE: Record<ScalarReviewRow['change'], string> = {
   new: 'bg-emerald-100 text-emerald-800',
   update: 'bg-amber-100 text-amber-800',
-  unchanged: 'bg-slate-100 text-slate-600',
+  unchanged: 'bg-slate-100 text-ink-600',
   unsupported: 'bg-slate-100 text-slate-400',
 }
 
@@ -606,15 +607,15 @@ function ImportPanelBody(props: {
   const courseworkCount = (skills as Array<{ category?: string }>).filter((s) => s.category === 'coursework').length
 
   return (
-    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-      <p className="text-xs font-medium text-slate-700">
+    <div className="mt-3 rounded-lg border border-line bg-slate-50 px-3 py-2">
+      <p className="text-xs font-medium text-ink-700">
         Import parsed data into your profile. Rejected review items are excluded. Nothing is overwritten
         without your explicit approval.
       </p>
 
       <div role="radiogroup" aria-label="Import mode" className="mt-2 flex flex-wrap gap-3">
         {IMPORT_MODES.map((mode) => (
-          <label key={mode.id} className="inline-flex items-center gap-1.5 text-xs text-slate-700" title={mode.hint}>
+          <label key={mode.id} className="inline-flex items-center gap-1.5 text-xs text-ink-700" title={mode.hint}>
             <input
               type="radio"
               name={`import-mode-${mode.id}`}
@@ -630,7 +631,7 @@ function ImportPanelBody(props: {
       {prefs.mode === 'fill' && (
         <div className="mt-2 space-y-2">
           {IMPORT_FIELDS.map((field) => (
-            <label key={field} className="block text-xs text-slate-700">
+            <label key={field} className="block text-xs text-ink-700">
               <span className="inline-flex items-center gap-1.5 font-medium">
                 <input
                   type="checkbox"
@@ -645,7 +646,7 @@ function ImportPanelBody(props: {
                 />
                 {field}
               </span>
-              <span className="block pl-5 text-[11px] text-slate-500">
+              <span className="block pl-5 text-[11px] text-ink-500">
                 Proposed: {proposedImportValues(field, analysis, rejected, approved)}
               </span>
             </label>
@@ -656,7 +657,7 @@ function ImportPanelBody(props: {
       {prefs.mode === 'select' && (
         <div className="mt-2 space-y-2">
           {IMPORT_FIELDS.map((field) => (
-            <div key={field} className="text-xs text-slate-700">
+            <div key={field} className="text-xs text-ink-700">
               <label className="inline-flex items-center gap-1.5 font-medium">
                 <input
                   type="checkbox"
@@ -672,7 +673,7 @@ function ImportPanelBody(props: {
                 {field}
               </label>
               {prefs.fields.includes(field) && (
-                <ul className="mt-1 space-y-0.5 pl-5 text-[11px] text-slate-600">
+                <ul className="mt-1 space-y-0.5 pl-5 text-[11px] text-ink-600">
                   {scalarRows
                     .filter((r) => r.group === field)
                     .map((row) => (
@@ -703,7 +704,7 @@ function ImportPanelBody(props: {
               const checked = checks.includes(row.path)
               const usable = row.change === 'new' || row.change === 'update'
               return (
-                <li key={row.path} className="flex flex-wrap items-start gap-2 text-xs text-slate-700">
+                <li key={row.path} className="flex flex-wrap items-start gap-2 text-xs text-ink-700">
                   <label className="inline-flex min-w-0 flex-1 items-start gap-1.5">
                     <input
                       type="checkbox"
@@ -717,10 +718,10 @@ function ImportPanelBody(props: {
                       <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${CHANGE_BADGE[row.change]}`}>
                         {row.change}
                       </span>
-                      <span className="block text-[11px] text-slate-500">
+                      <span className="block text-[11px] text-ink-500">
                         Current: {row.current === '' ? <em>empty</em> : `“${row.current}”`}
                       </span>
-                      <span className="block text-[11px] text-slate-500">
+                      <span className="block text-[11px] text-ink-500">
                         Proposed: {row.proposed === '' ? <em>no value</em> : `“${row.proposed}”`}
                       </span>
                     </span>
@@ -733,10 +734,10 @@ function ImportPanelBody(props: {
       )}
 
       {prefs.mode !== 'fill' && completed && (
-        <div className="mt-3 rounded-md border border-slate-200 bg-white px-2.5 py-2">
-          <p className="text-xs font-medium text-slate-700">Skills: merge, replace, or review individually</p>
+        <div className="mt-3 rounded-md border border-line bg-surface px-2.5 py-2">
+          <p className="text-xs font-medium text-ink-700">Skills: merge, replace, or review individually</p>
           <div role="radiogroup" aria-label="Skills mode" className="mt-1.5 flex flex-wrap gap-3">
-            <label className="inline-flex items-center gap-1.5 text-xs text-slate-700" title="Add new skills, keep everything already on your profile.">
+            <label className="inline-flex items-center gap-1.5 text-xs text-ink-700" title="Add new skills, keep everything already on your profile.">
               <input
                 type="radio"
                 name="skills-mode-merge"
@@ -746,7 +747,7 @@ function ImportPanelBody(props: {
               />
               Merge
             </label>
-            <label className="inline-flex items-center gap-1.5 text-xs text-slate-700" title="Replace your whole skill list with the approved resume skills. Removed skills are shown before you confirm.">
+            <label className="inline-flex items-center gap-1.5 text-xs text-ink-700" title="Replace your whole skill list with the approved resume skills. Removed skills are shown before you confirm.">
               <input
                 type="radio"
                 name="skills-mode-replace"
@@ -761,7 +762,7 @@ function ImportPanelBody(props: {
           {verifiedNew.length > 0 && (
             <ul aria-label="New skills to import" className="mt-2 space-y-1">
               {verifiedNew.map((skill) => (
-                <li key={skill.name} className="flex items-start gap-1.5 text-xs text-slate-700">
+                <li key={skill.name} className="flex items-start gap-1.5 text-xs text-ink-700">
                   <input
                     type="checkbox"
                     checked={!rejectedSet.has(skill.name.toLowerCase())}
@@ -771,19 +772,19 @@ function ImportPanelBody(props: {
                   />
                   <span>
                     <span className="font-medium">{skill.name}</span>
-                    {skill.category && <span className="text-[11px] text-slate-500"> ({skill.category})</span>}
+                    {skill.category && <span className="text-[11px] text-ink-500"> ({skill.category})</span>}
                   </span>
                 </li>
               ))}
             </ul>
           )}
           {approvedTerms.length > 0 && (
-            <p className="mt-1.5 text-[11px] text-slate-600">
+            <p className="mt-1.5 text-[11px] text-ink-600">
               Review-approved to import: {approvedTerms.join(', ')}.
             </p>
           )}
           {courseworkCount > 0 && (
-            <p className="mt-1.5 text-[11px] text-slate-500">
+            <p className="mt-1.5 text-[11px] text-ink-500">
               {courseworkCount} coursework item{courseworkCount === 1 ? '' : 's'} never auto-import
               as professional skills.
             </p>
@@ -791,10 +792,10 @@ function ImportPanelBody(props: {
 
           {existingNames.length > 0 && (
             <div className="mt-2">
-              <p className="text-xs font-medium text-slate-700">Existing profile skills</p>
+              <p className="text-xs font-medium text-ink-700">Existing profile skills</p>
               <ul aria-label="Existing profile skills" className="mt-1 space-y-1">
                 {existingNames.map((name) => (
-                  <li key={name} className="flex items-start gap-1.5 text-xs text-slate-700">
+                  <li key={name} className="flex items-start gap-1.5 text-xs text-ink-700">
                     <input
                       type="checkbox"
                       checked={removeSet.has(name.toLowerCase())}
@@ -831,13 +832,13 @@ function ImportPanelBody(props: {
           type="button"
           disabled={busy}
           onClick={onCancel}
-          className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-50"
+          className="rounded-md border border-line px-2.5 py-1 text-xs font-medium text-ink-700 disabled:opacity-50"
         >
           Cancel
         </button>
       </div>
       {importResult && (
-        <p role="status" className="mt-2 text-xs text-slate-700">
+        <p role="status" className="mt-2 text-xs text-ink-700">
           {importResult}
         </p>
       )}
@@ -846,6 +847,7 @@ function ImportPanelBody(props: {
 }
 
 export function ResumesPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const resumesQuery = useResumes()
   const [file, setFile] = useState<File | null>(null)
@@ -963,18 +965,7 @@ export function ResumesPage() {
     }
   }
 
-  async function loadAnalysis(id: string) {
-    setAnalyses((prev) => ({ ...prev, [id]: { kind: 'loading' } }))
-    try {
-      const analysis = await getResumeAnalysis(id)
-      setAnalyses((prev) => ({ ...prev, [id]: { kind: 'ready', analysis } }))
-    } catch (err) {
-      setAnalyses((prev) => ({
-        ...prev,
-        [id]: { kind: 'error', message: resumeErrorMessage(err, 'Load analysis') },
-      }))
-    }
-  }
+
 
   async function onAnalyze(id: string) {
     if (busy) return
@@ -1278,11 +1269,11 @@ export function ResumesPage() {
           }}
           onClick={() => inputRef.current?.click()}
           className={`mb-2 rounded-xl border-2 border-dashed px-6 py-8 text-center text-sm ${
-            dragOver ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-slate-300 bg-white text-slate-600'
+            dragOver ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-line bg-surface text-ink-600'
           }`}
         >
           {file ? (
-            <p className="font-medium text-slate-900">{file.name} ({formatSize(file.size)})</p>
+            <p className="font-medium text-ink-900">{file.name} ({formatSize(file.size)})</p>
           ) : (
             <p>Drag and drop a PDF or DOCX here, or click to choose a file. Max 10 MB.</p>
           )}
@@ -1308,7 +1299,7 @@ export function ResumesPage() {
       </form>
 
       {busy && busyLabel && (
-        <p role="status" className="mb-3 text-sm text-slate-600">
+        <p role="status" className="mb-3 text-sm text-ink-600">
           {busyLabel} Please wait — do not resubmit.
         </p>
       )}
@@ -1323,7 +1314,7 @@ export function ResumesPage() {
         </p>
       )}
 
-      {resumesQuery.isPending && <p className="text-sm text-slate-600">Loading resumes…</p>}
+      {resumesQuery.isPending && <p className="text-sm text-ink-600">Loading resumes…</p>}
       {resumesQuery.isError && (
         <div role="alert" className="rounded-xl border border-red-300 bg-red-50 px-6 py-8 text-center">
           <h2 className="text-sm font-semibold text-red-900">Could not load resumes</h2>
@@ -1359,16 +1350,16 @@ export function ResumesPage() {
               .map((r) => r.path)
             const reviewChecksForResume = reviewChecks[resume.id] ?? defaultChecks
             return (
-              <li key={resume.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <li key={resume.id} className="rounded-xl border border-line bg-surface px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-slate-900">{resume.originalFilename}</p>
-                    <p className="text-sm text-slate-600">
+                    <p className="font-medium text-ink-900">{resume.originalFilename}</p>
+                    <p className="text-sm text-ink-600">
                       {formatSize(resume.fileSize)} · Uploaded {formatDate(resume.createdAt)} · {resume.status}
                       {resume.isDefault ? ' · default' : ''}
                     </p>
                     {analysisState.kind === 'ready' && (
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 text-sm text-ink-600">
                         Analysis: {analysisState.analysis.status}
                         {analysisState.analysis.confidence ? ` · confidence ${analysisState.analysis.confidence}` : ''}
                       </p>
@@ -1379,7 +1370,7 @@ export function ResumesPage() {
                     {skills.length > 0 && (
                       <ul aria-label={`Parsed skills for ${resume.originalFilename}`} className="mt-2 flex flex-wrap gap-1.5">
                         {skills.map((skill) => (
-                          <li key={skill} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700">
+                          <li key={skill} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-ink-700">
                             {skill}
                           </li>
                         ))}
@@ -1401,7 +1392,7 @@ export function ResumesPage() {
                         type="button"
                         disabled={busy}
                         onClick={() => void run('Default set', 'Default set done.', () => setDefaultResume(resume.id))}
-                        className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-50"
+                        className="rounded-md border border-line px-2.5 py-1 text-xs font-medium text-ink-700 disabled:opacity-50"
                       >
                         Set default
                       </button>
@@ -1410,7 +1401,7 @@ export function ResumesPage() {
                       type="button"
                       disabled={busy}
                       onClick={() => void onAnalyze(resume.id)}
-                      className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-50"
+                      className="rounded-md border border-line px-2.5 py-1 text-xs font-medium text-ink-700 disabled:opacity-50"
                     >
                       Analyze
                     </button>
@@ -1419,7 +1410,7 @@ export function ResumesPage() {
                         type="button"
                         disabled={busy}
                         onClick={() => void onRetry(resume.id)}
-                        className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-50"
+                        className="rounded-md border border-line px-2.5 py-1 text-xs font-medium text-ink-700 disabled:opacity-50"
                       >
                         Retry analysis
                       </button>
@@ -1427,8 +1418,8 @@ export function ResumesPage() {
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => void loadAnalysis(resume.id)}
-                      className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-50"
+                      onClick={() => navigate(`/resumes/${resume.id}/analysis`)}
+                      className="rounded-md border border-line px-2.5 py-1 text-xs font-medium text-ink-700 disabled:opacity-50"
                     >
                       View analysis
                     </button>
@@ -1436,7 +1427,7 @@ export function ResumesPage() {
                       type="button"
                       disabled={busy}
                       onClick={() => void onDownload(resume.id, resume.originalFilename)}
-                      className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-50"
+                      className="rounded-md border border-line px-2.5 py-1 text-xs font-medium text-ink-700 disabled:opacity-50"
                     >
                       Download
                     </button>
@@ -1447,7 +1438,7 @@ export function ResumesPage() {
                         setImportOpenId((open) => (open === resume.id ? null : resume.id))
                         setImportResult(null)
                       }}
-                      className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-50"
+                      className="rounded-md border border-line px-2.5 py-1 text-xs font-medium text-ink-700 disabled:opacity-50"
                     >
                       Import
                     </button>

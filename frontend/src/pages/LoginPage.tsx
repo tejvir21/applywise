@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuthStore } from '@/stores/auth-store'
 
 export function LoginPage() {
@@ -26,51 +25,62 @@ export function LoginPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Sign in</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4 text-sm">
-          <label className="block text-slate-700">
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold tracking-tight text-white">Welcome back</h2>
+        <p className="text-sm text-slate-400">Sign in to continue to your dashboard.</p>
+      </div>
+      <form onSubmit={onSubmit} className="space-y-5 text-sm">
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm font-medium text-slate-200">
             Email
-            <input
-              aria-label="Email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5"
-            />
           </label>
-          <label className="block text-slate-700">
+          <input
+            id="email"
+            aria-label="Email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2.5 text-white shadow-inner shadow-black/20 transition focus:border-fuchsia-400/70 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/30"
+            placeholder="you@example.com"
+          />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="password" className="text-sm font-medium text-slate-200">
             Password
-            <input
-              aria-label="Password"
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5"
-            />
           </label>
-          {error && (
-            <p role="alert" className="text-red-700">
-              {error}
-            </p>
-          )}
-          <Button type="submit" disabled={isAuthenticating}>
-            {isAuthenticating ? 'Signing in…' : 'Sign in'}
-          </Button>
-          <p className="text-slate-600">
-            Need an account?{' '}
-            <Link className="text-brand-700 underline" to="/register">
-              Register
-            </Link>
+          <input
+            id="password"
+            aria-label="Password"
+            type="password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2.5 text-white shadow-inner shadow-black/20 transition focus:border-fuchsia-400/70 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/30"
+            placeholder="Enter your password"
+          />
+        </div>
+        {error && (
+          <p role="alert" className="rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+            {error}
           </p>
-        </form>
-      </CardContent>
-    </Card>
+        )}
+        <Button
+          type="submit"
+          disabled={isAuthenticating}
+          className="w-full rounded-xl bg-gradient-to-r from-fuchsia-400 via-violet-400 to-cyan-300 text-slate-950 shadow-[0_40px_80px_-60px_rgba(192,132,252,0.9)] transition hover:brightness-110 disabled:opacity-70"
+        >
+          {isAuthenticating ? 'Signing in…' : 'Sign in'}
+        </Button>
+        <p className="text-center text-sm text-slate-400">
+          Need an account?{' '}
+          <Link className="font-medium text-fuchsia-200 transition hover:text-fuchsia-100" to="/register">
+            Create one
+          </Link>
+        </p>
+      </form>
+    </div>
   )
 }

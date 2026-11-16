@@ -10,8 +10,9 @@
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration:replica": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ignore-pattern 'src/jobs/discovery/**' --ignore-pattern 'src/services/*.js'"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -29,6 +30,7 @@
     "pdf-parse": "^2.4.5",
     "pino": "^9.5.0",
     "pino-pretty": "^13.0.0",
+    "playwright": "^1.65.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

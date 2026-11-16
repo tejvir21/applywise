@@ -97,7 +97,68 @@ export async function getProfileCompletion(): Promise<{
   }
 }
 
+export type ProfileReadiness = {
+  userId: string
+  status: 'no_profile' | 'incomplete' | 'needs_work' | 'ready'
+  percentage: number
+  completedSections: string[]
+  incompleteSections: string[]
+  details: Record<string, { completed: boolean; missing: string[] }>
+  resumeAvailable: boolean
+  resumeId?: string
+  missingRequired: string[]
+  missingRecommended: string[]
+  optional: string[]
+  recommendations: string[]
+}
+
+export async function getProfileReadiness(): Promise<ProfileReadiness> {
+  const data = await apiGet<unknown>('/api/profile/readiness')
+  const parsed = data as Record<string, unknown>;
+  return {
+    userId: typeof parsed.userId === 'string' ? parsed.userId : '',
+    status:
+      typeof parsed.status === 'string' &&
+      ['no_profile', 'incomplete', 'needs_work', 'ready'].includes(parsed.status)
+        ? (parsed.status as ProfileReadiness['status'])
+        : 'no_profile',
+    percentage: typeof parsed.percentage === 'number' ? parsed.percentage : 0,
+    completedSections: Array.isArray(parsed.completedSections)
+      ? (parsed.completedSections as string[])
+      : [],
+    incompleteSections: Array.isArray(parsed.incompleteSections)
+      ? (parsed.incompleteSections as string[])
+      : [],
+    details:
+      typeof parsed.details === 'object' && parsed.details !== null
+        ? (parsed.details as Record<string, { completed: boolean; missing: string[] }>)
+        : {},
+    resumeAvailable: typeof parsed.resumeAvailable === 'boolean' ? parsed.resumeAvailable : false,
+    resumeId: typeof parsed.resumeId === 'string' ? parsed.resumeId : undefined,
+    missingRequired: Array.isArray(parsed.missingRequired) ? (parsed.missingRequired as string[]) : [],
+    missingRecommended: Array.isArray(parsed.missingRecommended)
+      ? (parsed.missingRecommended as string[])
+      : [],
+    optional: Array.isArray(parsed.optional) ? (parsed.optional as string[]) : [],
+    recommendations: Array.isArray(parsed.recommendations)
+      ? (parsed.recommendations as string[])
+      : [],
+  }
+}
+
 export async function removeProfileSkill(skillId: string): Promise<CandidateProfile> {
   const data = await apiDelete<unknown>(`/api/profile/skills/${skillId}`)
   return profileSchema.parse(data) as CandidateProfile
+}
+
+export type JobProfileReadiness = {
+  ready: boolean
+  missingRequiredProfileFields: string[]
+  missingRecommendedProfileFields: string[]
+  matchedSkills: string[]
+  missingSkills: string[]
+}
+
+export async function getJobProfileReadiness(jobId: string): Promise<JobProfileReadiness> {
+  return apiGet<JobProfileReadiness>(`/api/profile/readiness/jobs/${jobId}`)
 }

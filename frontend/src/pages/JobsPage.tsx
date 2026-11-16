@@ -1,171 +1,279 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { EmptyState } from '@/components/EmptyState'
-import { MatchExplanation, MatchScoreBadge } from '@/components/MatchExplanation'
-import { PageHeader } from '@/components/PageHeader'
-import { useJobMatches } from '@/hooks/useJobMatches'
-import { getJobMatchExplanation } from '@/services/jobs'
-import { ApiClientError } from '@/types/api'
-import type { JobMatchExplanation } from '@/types/api'
+﻿import { useState } from "react";
+import { EmptyState } from "@/components/EmptyState";
+import { JobDiscoveryPanel } from "@/components/JobDiscoveryPanel";
+import {
+  MatchExplanation,
+  MatchScoreBadge,
+} from "@/components/MatchExplanation";
+import { JobPriorityBadge } from "@/components/JobPriorityBadge";
+import { PageHeader } from "@/components/PageHeader";
+import { useJobMatches } from "@/hooks/useJobMatches";
+import { usePrioritizedJobs } from "@/hooks/useProfile";
+import { getJobMatchExplanation } from "@/services/jobs";
+import type { JobMatchExplanation } from "@/types/api";
+import type { PrioritizedJob } from "@/services/jobs";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ExternalLink, MapPin } from "lucide-react";
 
 export function JobsPage() {
-  const [minScoreInput, setMinScoreInput] = useState('0')
-  const [minScore, setMinScore] = useState(0)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [explanations, setExplanations] = useState<Record<string, JobMatchExplanation>>({})
-  const [explanationError, setExplanationError] = useState<string | null>(null)
-  const [loadingExplanation, setLoadingExplanation] = useState(false)
+  const [minScoreInput, setMinScoreInput] = useState("0");
+  const [minScore, setMinScore] = useState(0);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [explanations, setExplanations] = useState<
+    Record<string, JobMatchExplanation>
+  >({});
+  const [explanationError, setExplanationError] = useState<string | null>(null);
+  const [loadingExplanation, setLoadingExplanation] = useState(false);
 
-  const { data, isPending, isError, error, refetch } = useJobMatches({ minScore, page: 1, pageSize: 20 })
+  const { data, isPending, isError, error, refetch } = useJobMatches({
+    minScore,
+    page: 1,
+    pageSize: 20,
+  });
+
+  const { data: priorityData, isPending: priorityPending } = usePrioritizedJobs({
+    minScore,
+    page: 1,
+    pageSize: 20,
+  });
+
+  const priorityById = new Map(
+    (priorityData?.jobs ?? []).map((j: PrioritizedJob) => [j.id, j]),
+  );
 
   function applyFilter(event: React.FormEvent) {
-    event.preventDefault()
-    const parsed = Number(minScoreInput)
-    setMinScore(Number.isFinite(parsed) ? Math.min(100, Math.max(0, Math.floor(parsed))) : 0)
+    event.preventDefault();
+    const parsed = Number(minScoreInput);
+    setMinScore(
+      Number.isFinite(parsed)
+        ? Math.min(100, Math.max(0, Math.floor(parsed)))
+        : 0,
+    );
   }
 
   async function toggleExplanation(jobId: string) {
     if (expandedId === jobId) {
-      setExpandedId(null)
-      return
+      setExpandedId(null);
+      return;
     }
-    setExpandedId(jobId)
-    setExplanationError(null)
-    if (explanations[jobId]) return
-    setLoadingExplanation(true)
+    setExpandedId(jobId);
+    setExplanationError(null);
+    if (explanations[jobId]) return;
+    setLoadingExplanation(true);
     try {
-      const match = await getJobMatchExplanation(jobId)
-      setExplanations((prev) => ({ ...prev, [jobId]: match }))
+      const match = await getJobMatchExplanation(jobId);
+      setExplanations((prev) => ({ ...prev, [jobId]: match }));
     } catch (err) {
-      setExplanationError(err instanceof Error ? err.message : 'Could not load the explanation')
+      setExplanationError(
+        err instanceof Error ? err.message : "Could not load the explanation",
+      );
     } finally {
-      setLoadingExplanation(false)
+      setLoadingExplanation(false);
     }
   }
 
+  function getReadinessSummary(match: any): string | null {
+    const prio = priorityById.get(match.id);
+    if (!prio) return null;
+    const { matchedSkills, missingSkills, missingRequiredProfileFields } =
+      prio.readiness;
+    const bits: string[] = [];
+    if (matchedSkills.length > 0)
+      bits.push("Matched: " + matchedSkills.join(", "));
+    if (missingSkills.length > 0)
+      bits.push("Missing skills: " + missingSkills.join(", "));
+    if (missingRequiredProfileFields.length > 0)
+      bits.push(
+        "Complete profile: " + missingRequiredProfileFields.join(", "),
+      );
+    return bits.length > 0 ? bits.join(" · ") : null;
+  }
+
   return (
-    <div>
+    <div className="mx-auto max-w-6xl space-y-8">
       <PageHeader
         title="Jobs"
-        description="Ranked by deterministic match score against your verified profile. Scores only — nothing is submitted from this page."
+        description="Discover live vacancies and review ranked matches against your verified profile. You apply externally on each source site."
+        eyebrow="JOB DISCOVERY"
       />
-      <form onSubmit={applyFilter} className="mb-4 flex items-end gap-2">
-        <label className="text-sm text-slate-700">
-          Minimum match score
-          <input
-            aria-label="Minimum match score"
-            type="number"
-            min={0}
-            max={100}
-            value={minScoreInput}
-            onChange={(event) => setMinScoreInput(event.target.value)}
-            className="ml-2 w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
-          />
-        </label>
-        <button
-          type="submit"
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
-        >
-          Apply
-        </button>
-      </form>
 
-      {isPending && <p className="text-sm text-slate-600">Loading matches…</p>}
+      <JobDiscoveryPanel />
 
-      {isError && (
-        <div role="alert" className="rounded-xl border border-red-300 bg-red-50 px-6 py-8 text-center">
-          <h2 className="text-sm font-semibold text-red-900">Could not load matches</h2>
-          {error instanceof ApiClientError && error.status === 401 && (
-            <p className="mx-auto mt-2 max-w-md text-sm text-red-700">
-              Your session expired. <Link className="underline" to="/login">Sign in again</Link>, then
-              come back — the page retries automatically after refresh.
+      <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
+        <div className="flex flex-col gap-4 border-b border-[var(--border-subtle)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">
+              Matched jobs
+            </h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              Personalized matches based on your profile
             </p>
-          )}
-          {error instanceof ApiClientError && error.code === 'NOT_FOUND' && (
-            <p className="mx-auto mt-2 max-w-md text-sm text-red-700">
-              Matching needs a candidate profile first.{' '}
-              <Link className="underline" to="/profile">
-                Create your profile
-              </Link>{' '}
-              to see ranked matches.
-            </p>
-          )}
-          {!(error instanceof ApiClientError && (error.status === 401 || error.code === 'NOT_FOUND')) && (
-            <p className="mx-auto mt-2 max-w-md text-sm text-red-700">
-              {error instanceof Error ? error.message : 'Unknown error'}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="mt-4 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+          </div>
+          <form
+            onSubmit={applyFilter}
+            className="flex flex-wrap items-center gap-2"
           >
-            Retry
-          </button>
+            <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+              <span>Min. match score</span>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={minScoreInput}
+                onChange={(event) => setMinScoreInput(event.target.value)}
+                aria-label="Minimum match score"
+                placeholder="0-100"
+                className="h-9 w-[90px]"
+              />
+            </label>
+            <Button type="submit" size="sm" variant="secondary">
+              Apply
+            </Button>
+          </form>
         </div>
-      )}
+        <div className="px-6 py-5">
+          {isPending || priorityPending ? (
+            <div className="flex items-center gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+              Loading matches...
+            </div>
+          ) : null}
+          {isError && (
+            <div
+              role="alert"
+              className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface-secondary)] px-4 py-3 text-sm text-[var(--text-primary)]"
+            >
+              {error instanceof Error
+                ? error.message
+                : "Could not load matches."}{" "}
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="underline underline-offset-2"
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
-      {!isPending && !isError && (!data || data.matches.length === 0) && (
-        <EmptyState
-          title="No matches yet"
-          description={
-            minScore > 0
-              ? `No jobs score at least ${minScore}. Lower the minimum score or add more jobs.`
-              : 'Import or add jobs, then return here to see them ranked by match score.'
-          }
-        />
-      )}
+          {!isPending &&
+            !isError &&
+            (!data?.matches || data.matches.length === 0) && (
+              <EmptyState
+                title="No matched jobs yet"
+                description="Discover jobs above, then complete your profile to generate matches."
+              />
+            )}
 
-      {!isPending && !isError && data && data.matches.length > 0 && (
-        <div>
-          <p className="mb-2 text-xs text-slate-500">
-            Showing {data.matches.length} of {data.total} ranked matches (scored {data.scanned} jobs).
-          </p>
-          <ul className="space-y-3">
-            {data.matches.map((job) => (
-              <li key={job.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-slate-900">{job.title}</p>
-                    <p className="text-sm text-slate-600">
-                      {job.companyName}
-                      {job.location ? ` · ${job.location}` : ''}
-                      {job.source ? ` · ${job.source}` : ''}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!job.eligible && (
-                      <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">
-                        eligibility warning
-                      </span>
-                    )}
-                    <MatchScoreBadge score={job.matchScore} />
-                    <button
-                      type="button"
-                      onClick={() => void toggleExplanation(job.id)}
-                      aria-expanded={expandedId === job.id}
-                      className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700"
-                    >
-                      {expandedId === job.id ? 'Hide why' : 'Why this score?'}
-                    </button>
-                  </div>
-                </div>
-                {expandedId === job.id && (
-                  <div>
-                    {loadingExplanation && !explanations[job.id] && (
-                      <p className="mt-3 text-sm text-slate-600">Loading explanation…</p>
-                    )}
-                    {explanationError && (
-                      <p role="alert" className="mt-3 text-sm text-red-700">{explanationError}</p>
-                    )}
-                    {explanations[job.id] && <MatchExplanation match={explanations[job.id]} />}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+          {data?.matches && data.matches.length > 0 && (
+            <div className="space-y-3">
+              {data.matches.map((match: any) => {
+                const prio = priorityById.get(match.id);
+                const readinessSummary = getReadinessSummary(match);
+                return (
+                  <Card
+                    key={match.id}
+                    className="border-[var(--border)] shadow-none transition-all duration-150 hover:shadow-[var(--shadow-md)] hover:border-[var(--border-strong)]"
+                  >
+                    <CardContent className="sm:p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                                {match.title}
+                              </h3>
+                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                {match.companyName}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <MatchScoreBadge score={match.matchScore} />
+                              {prio && <JobPriorityBadge priority={prio.priority} />}
+                            </div>
+                          </div>
+                          {readinessSummary && (
+                            <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
+                              {readinessSummary}
+                            </p>
+                          )}
+                          {(match.location ||
+                            match.salaryMin ||
+                            match.salaryMax) && (
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--text-tertiary)]">
+                              {match.location && <span>{match.location}</span>}
+                              {(match.salaryMin || match.salaryMax) && (
+                                <>
+                                  {match.location && (
+                                    <span>
+                                      <MapPin className="h-4 w-4" />
+                                    </span>
+                                  )}
+                                  <span>
+                                    {match.salaryMin && match.salaryMax
+                                      ? "$" +
+                                        match.salaryMin.toLocaleString() +
+                                        " - $" +
+                                        match.salaryMax.toLocaleString()
+                                      : match.salaryMin
+                                        ? "From $" +
+                                          match.salaryMin.toLocaleString()
+                                        : "Up to $" +
+                                          match.salaryMax!.toLocaleString()}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleExplanation(match.id)}
+                          className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                        >
+                          {expandedId === match.id
+                            ? "Hide explanation"
+                            : "Why this match?"}
+                        </button>
+                        {(match.applicationUrl || match.jobUrl || match.url) && (
+                          <a
+                            href={
+                              match.applicationUrl || match.jobUrl || match.url
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                          >
+                            View job <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        )}
+                      </div>
+                      {expandedId === match.id && (
+                        <div className="mt-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-4">
+                          {loadingExplanation && !explanations[match.id] ? (
+                            <p className="text-sm text-[var(--text-tertiary)]">
+                              Loading explanation...
+                            </p>
+                          ) : explanations[match.id] ? (
+                            <MatchExplanation match={explanations[match.id]} />
+                          ) : explanationError ? (
+                            <p className="text-sm text-[var(--text-primary)]">
+                              {explanationError}
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </section>
     </div>
-  )
+  );
 }

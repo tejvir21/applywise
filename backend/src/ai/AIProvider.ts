@@ -28,7 +28,10 @@ export interface AIProvider {
 /** Upstream provider failure. Messages are generic: prompts, facts, keys,
  *  and raw model output are never exposed to clients. */
 export class AIProviderError extends AppError {
-  constructor(message = 'AI generation failed') {
-    super('AI_PROVIDER_ERROR', message, 502);
+  public readonly retryable: boolean;
+
+  constructor(message = 'AI generation failed', statusCode: number = 502, retryable?: boolean) {
+    super('AI_PROVIDER_ERROR', message, statusCode);
+    this.retryable = retryable ?? statusCode >= 500;
   }
 }

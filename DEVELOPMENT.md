@@ -36,6 +36,10 @@ Copy [`.env.example`](./.env.example) to `backend/.env` (and optionally the repo
 | `SUPABASE_MAX_RETRIES` | Retry budget for transient Supabase failures | `2` |
 | `BROWSER_AUTOMATION_PROVIDER` | `mock` / `playwright` | `mock` |
 | `VITE_API_BASE_URL` | Frontend API origin (bare origin, NO `/api` suffix — all client paths already start with `/api`) | empty (= Vite proxy) |
+| `RATE_LIMIT_AI_GENERATION_PER_MINUTE` | Per-user rate limit for AI generation (tailored resume, cover letter, answers) | `10` |
+| `RATE_LIMIT_RESUME_UPLOAD_PER_MINUTE` | Per-user rate limit for resume uploads | `5` |
+| `RATE_LIMIT_RESUME_ANALYSIS_PER_MINUTE` | Per-user rate limit for resume analysis | `5` |
+| `RATE_LIMIT_JOB_INGESTION_PER_MINUTE` | Per-user rate limit for job ingestion (mock import, source import) | `10` |
 
 ## Backend
 

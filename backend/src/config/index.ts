@@ -50,9 +50,33 @@ const envSchema = z.object({
   // Browser automation
   BROWSER_AUTOMATION_PROVIDER: z.enum(["mock", "playwright"]).default("mock"),
 
+  // Job discovery (live search over authorized public APIs). No credentials are
+  // required for company boards (Greenhouse/Lever/Ashby) or Muse; Adzuna is
+  // key-gated and Remotive may be egress-limited. All limits are bounded.
+  ADZUNA_APP_ID: z.string().optional(),
+  ADZUNA_APP_KEY: z.string().optional(),
+  ADZUNA_COUNTRY: z.string().default("in"),
+  REMOTIVE_ENABLED: z.enum(["true", "false"]).default("true"),
+  COMPANY_BOARDS_JSON: z.string().optional(),
+  DISCOVERY_MAX_QUERIES: z.coerce.number().int().min(1).max(20).default(6),
+  DISCOVERY_MAX_PAGES_PER_SOURCE: z.coerce.number().int().min(1).max(10).default(2),
+  DISCOVERY_MAX_RESULTS_PER_SOURCE: z.coerce.number().int().min(1).max(100).default(50),
+  DISCOVERY_PAGE_SIZE: z.coerce.number().int().min(1).max(50).default(20),
+  DISCOVERY_RELEVANCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.2),
+  DISCOVERY_HTTP_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(6),
+  DISCOVERY_HTTP_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(12000),
+  DISCOVERY_RESULT_CACHE_MS: z.coerce.number().int().min(0).max(600000).default(120000),
+  DISCOVERY_HTTP_CACHE_TTL_MS: z.coerce.number().int().min(0).max(600000).default(60000),
+
   // Resume
   MAX_RESUME_SIZE_MB: z.coerce.number().default(10),
   RESUME_STORAGE_PATH: z.string().default("./storage/uploads"),
+
+  // Rate limiting (per-user quotas for expensive endpoints)
+  RATE_LIMIT_AI_GENERATION_PER_MINUTE: z.coerce.number().int().min(1).max(100).default(10),
+  RATE_LIMIT_RESUME_UPLOAD_PER_MINUTE: z.coerce.number().int().min(1).max(100).default(5),
+  RATE_LIMIT_RESUME_ANALYSIS_PER_MINUTE: z.coerce.number().int().min(1).max(100).default(5),
+  RATE_LIMIT_JOB_INGESTION_PER_MINUTE: z.coerce.number().int().min(1).max(100).default(10),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -24,6 +24,11 @@ export async function getResumes(): Promise<ResumeListItem[]> {
   return resumeListItemSchema.array().parse(data) as ResumeListItem[]
 }
 
+export async function getResume(id: string): Promise<ResumeListItem> {
+  const data = await apiGet<unknown>(`/api/resumes/${id}`)
+  return resumeListItemSchema.parse(data) as ResumeListItem
+}
+
 export async function uploadResume(file: File): Promise<{ resume: ResumeListItem; analysis: { id: string; status: string } | null }> {
   const form = new FormData()
   form.append('file', file, file.name)

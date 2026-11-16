@@ -203,6 +203,8 @@ All routes below require `Authorization: Bearer <access_token>` unless noted.
 - `PUT /api/profile`, `PATCH /api/profile` — replace / partially update profile
 - `DELETE /api/profile` — delete own profile
 - `GET /api/profile/completion` — profile completeness
+- `GET /api/profile/readiness` — profile completeness + readiness, including resume availability
+- `GET /api/profile/readiness/jobs/:jobId` — job-specific readiness for the authenticated candidate (missing profile fields, missing/matched job skills); read-only, never submits
 - `GET/PUT/PATCH /api/profile/preferences` — job preferences
 - `POST/DELETE /api/profile/skills|experience|education|projects|certifications[/...]` — manage profile sub-collections
 
@@ -241,6 +243,19 @@ Deterministic scoring against the caller's verified profile. No AI involved. Sco
 
 Weight allocation (sums to 100): required skills 25, preferred skills 10, experience 20, role alignment 15, location/mode 15, salary 5, employment type 5, education 5. Unknown inputs are excluded from numerator and denominator (never assumed); zero evaluable factors scores 0 with an insufficient-data note. Overridable per call via `MatchWeights`.
 
+### Job discovery (`/api/jobs/search`)
+
+Live search across configured, authorized public job sources (first-party company boards + public APIs). Discovery never writes to the database and never computes or alters the profile match score. See `JOB_PROVIDERS.md` for sources, credentials, and how to add company boards.
+
+- `GET /api/jobs/search?roles=&location=&countryIso=&freshness=&sort=&includeRemote=&includeWorldwideRemote=&page=&pageSize=` — roles is comma-separated and required (422 otherwise). Returns actually-fetched, cross-source-deduplicated listings with:
+  - `jobs[]` — each with distinct `postedAt` (source posting date), `updatedAt` (source update date), `fetchedAt` (when we fetched it), `dateConfidence`, and freshness flags (`isNewWithin7`, `olderListing`); `applicationUrl` preserves the direct employer link
+  - `totalUnique`, `page`, `pageSize`, `totalPages`, `hasMore` — real counts (upstream totals, when a source reports one, are surfaced separately as `upstreamTotal`)
+  - `queries[]` — the bounded, expanded role queries actually issued; each job shows `discoveredViaQuery`
+  - `sources[]` — per-source state: `connected_with_results | connected_no_matches | not_configured | rate_limited | temporarily_unavailable | blocked_upstream` (a failed/rate-limited source never removes results from healthy ones)
+  - `within7Count`, `olderCount`, `undatedCount`, `excluded{duplicates,relevance,geo,freshness}` — honest freshness distribution and drop accounting
+
+  `freshness`: `any | last7 | last14 | last30` (default `any`; bounded windows exclude undated listings but report them in `undatedCount`, never silently). `sort`: `relevance | newest`. Responses are cached briefly so "load more" (`page`) re-issues no upstream requests.
+
 ### Applications (`/api/applications`, Phase 6)
 
 Management, review, and approval only — no submission engine exists, so nothing here submits an application. Identity always comes from the JWT; every operation is owner-scoped.
@@ -267,6 +282,15 @@ AI-generated drafts from verified profile, resume, and job data only. Provider a
 - `POST .../materials/review` — mark reviewed (review only; no status change, no approval)
 
 Generation and editing require `DRAFT` status, so approved materials are immutable and drafts can never become `SUBMITTED` through these paths.
+
+Factual grounding: AI-generated claims are server-side verified against verified candidate facts. Each generated component carries a `verification` field with status `VERIFIED`, `UNSUPPORTED`, or `NEEDS_CANDIDATE_INPUT`, plus matched facts and unsupported claims. Package approval requires all components to be `APPROVED` and passes a cross-component consistency check (no conflicting employment dates, skills, company, or job title across resume, cover letter, and answers).
+
+Verification statuses (Phase 8.3.16):
+- `VERIFIED` — supported by available candidate facts (heuristic, not a guarantee of absolute truth).
+- `UNSUPPORTED` — not supported by available candidate facts.
+- `NEEDS_CANDIDATE_INPUT` — candidate clarification required (e.g., sensitive questions, missing information).
+
+Verification results are surfaced in the frontend `ApplicationPreparationPage` via a `VerificationBadge` component showing status, matched facts, and unsupported claims. Candidate edits via PATCH answers trigger re-verification on subsequent generation. Stale verification results are invalidated when content is regenerated.
 
 ### Platforms (`/api/platforms`, Phase 8)
 

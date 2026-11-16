@@ -24,6 +24,7 @@ import {
 } from '../services/ResumeService.js';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { rateLimitResumeUpload, rateLimitResumeAnalysis } from '../middleware/rateLimiter.js';
 import { AppError, NotFoundError, ValidationError } from '../utils/errors.js';
 
 const router = Router();
@@ -53,7 +54,7 @@ function getParamId(params: Record<string, string | string[]>): string {
  * persisted through the configured storage provider. Auth runs before any
  * bytes are parsed, so anonymous uploads are rejected with 401.
  */
-router.post('/', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/', rateLimitResumeUpload, async (req: AuthenticatedRequest, res: Response) => {
   const maxBytes = getConfig().MAX_RESUME_SIZE_MB * 1024 * 1024;
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -158,7 +159,7 @@ router.patch('/:id/default', validate(setDefaultResumeSchema), async (req: Authe
  * POST /api/resumes/:id/analyze
  * Start/resume analysis
  */
-router.post('/:id/analyze', validate(analyzeResumeSchema), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/:id/analyze', rateLimitResumeAnalysis, validate(analyzeResumeSchema), async (req: AuthenticatedRequest, res: Response) => {
   const result = await analyzeResume(getUserId(req), getParamId(req.params));
   res.json({ success: true, data: result });
 });
@@ -179,7 +180,7 @@ router.get('/:id/analysis', validate(resumeIdParamSchema), async (req: Authentic
  * POST /api/resumes/:id/analysis/retry
  * Retry failed analysis
  */
-router.post('/:id/analysis/retry', validate(resumeIdParamSchema), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/:id/analysis/retry', rateLimitResumeAnalysis, validate(resumeIdParamSchema), async (req: AuthenticatedRequest, res: Response) => {
   const result = await retryAnalysis(getUserId(req), getParamId(req.params));
   res.json({ success: true, data: result });
 });

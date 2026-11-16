@@ -1,10 +1,113 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Segoe UI", system-ui, sans-serif;
-  --color-brand-50: #eef4ff;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
+:root {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  /* Light theme - Concept B (Apple-inspired premium) */
+  --background: #ffffff;
+  --background-subtle: #fafafa;
+  --sidebar: #ffffff;
+  --sidebar-hover: #f5f5f7;
+  --sidebar-active: #f0f0f2;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-secondary: #f7f7f8;
+  --surface-tertiary: #f2f2f4;
+  --surface-overlay: #ffffff;
+
+  --text-primary: #1d1d1f;
+  --text-secondary: #424245;
+  --text-tertiary: #6e6e73;
+  --text-quaternary: #86868b;
+
+  --border: #e5e5e7;
+  --border-subtle: #f0f0f2;
+  --border-strong: #d2d2d7;
+
+  --accent: #1d1d1f;
+  --accent-hover: #000000;
+  --accent-subtle: rgba(29, 29, 31, 0.06);
+  --accent-foreground: #ffffff;
+
+  /* Semantic colors */
+  --success: #1d1d1f;
+  --success-subtle: rgba(29, 29, 31, 0.06);
+  --warning: #6e6e73;
+  --warning-subtle: rgba(110, 110, 115, 0.08);
+  --danger: #1d1d1f;
+  --danger-subtle: rgba(29, 29, 31, 0.06);
+  --info: #1d1d1f;
+  --info-subtle: rgba(29, 29, 31, 0.06);
+
+  /* Component tokens - mixed radius for distinction */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+
+  --shadow-xs: 0 1px 1px 0 rgb(0 0 0 / 0.01);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.02);
+  --shadow-md: 0 2px 8px 0 rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 4px 16px 0 rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 8px 24px 0 rgb(0 0 0 / 0.08);
+  --shadow-focus: 0 0 0 4px rgba(29, 29, 31, 0.06);
+
+  /* Control sizing */
+  --control-height-sm: 32px;
+  --control-height-md: 34px;
+  --control-height-lg: 38px;
+  --control-height-xl: 42px;
+}
+
+.dark {
+  /* Dark theme - Concept A (Linear-inspired) */
+  --background: #0b0b0f;
+  --background-subtle: #0f0f13;
+  --sidebar: #0b0b0f;
+  --sidebar-hover: #131316;
+  --sidebar-active: rgba(139, 92, 246, 0.12);
+  --surface: #131316;
+  --surface-elevated: #18181b;
+  --surface-secondary: #131316;
+  --surface-tertiary: #1f1f23;
+  --surface-overlay: #18181b;
+
+  --text-primary: #e6e6e9;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+  --text-quaternary: #52525b;
+
+  --border: rgba(255, 255, 255, 0.05);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-strong: rgba(255, 255, 255, 0.08);
+
+  --accent: #8b5cf6;
+  --accent-hover: #a78bfa;
+  --accent-subtle: rgba(139, 92, 246, 0.12);
+  --accent-foreground: #ffffff;
+
+  /* Semantic colors */
+  --success: #22c55e;
+  --success-subtle: rgba(34, 197, 94, 0.12);
+  --warning: #f59e0b;
+  --warning-subtle: rgba(245, 158, 11, 0.12);
+  --danger: #ef4444;
+  --danger-subtle: rgba(239, 68, 68, 0.12);
+  --info: #8b5cf6;
+  --info-subtle: rgba(139, 92, 246, 0.12);
+
+  /* Shadows */
+  --shadow-xs: 0 1px 1px 0 rgb(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-md: 0 2px 8px 0 rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 4px 16px 0 rgb(0 0 0 / 0.6);
+  --shadow-xl: 0 8px 24px 0 rgb(0 0 0 / 0.7);
+  --shadow-focus: 0 0 0 4px rgba(139, 92, 246, 0.16);
 }
 
 html,
@@ -16,6 +119,60 @@ body,
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: #f8fafc;
-  color: #0f172a;
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--background);
+  color: var(--text-primary);
+  transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  border-color: var(--border);
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-quaternary);
+}
+
+/* Native control styling */
+select option {
+  background-color: var(--surface-elevated);
+  color: var(--text-primary);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+::selection {
+  background: var(--accent-subtle);
+  color: var(--text-primary);
 }

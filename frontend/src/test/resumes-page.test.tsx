@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout } from '@/layouts/AppLayout'
 import { RequireAuth } from '@/components/RequireAuth'
 import { ResumesPage } from '@/pages/ResumesPage'
+import { ResumeReviewPage } from '@/pages/ResumeReviewPage'
 import {
   downloadResumeFile,
   importResumeToProfile,
@@ -83,6 +84,14 @@ function renderResumesPage(path = '/resumes') {
             element={
               <RequireAuth>
                 <ResumesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/resumes/:id/analysis"
+            element={
+              <RequireAuth>
+                <ResumeReviewPage />
               </RequireAuth>
             }
           />
@@ -593,8 +602,9 @@ describe('ResumesPage analysis review', () => {
     await screen.findByText('resume.pdf')
 
     await user.click(screen.getByRole('button', { name: 'View analysis' }))
-    await screen.findByText(/Verified skills \(2\)/)
-    await user.click(screen.getByRole('button', { name: 'Import' }))
+    await screen.findByText(/Resume Review/i)
+    await screen.findByText(/Import into profile/i)
+    // On review page, import UI is visible by default
     for (const field of ['location', 'contact', 'links']) {
       expect(screen.getByText(field, { exact: true })).toBeInTheDocument()
     }
@@ -766,8 +776,9 @@ describe('ResumesPage import modes', () => {
     renderResumesPage()
     await screen.findByText('resume.pdf')
     await user.click(screen.getByRole('button', { name: 'View analysis' }))
-    await screen.findByText(/Verified skills \(2\)/)
-    await user.click(screen.getByRole('button', { name: 'Import' }))
+    await screen.findByText(/Resume Review/i)
+    await screen.findByText(/Import into profile/i)
+    // On review page, import UI is visible by default
   }
 
   it('defaults to Fill empty mode', async () => {
@@ -776,8 +787,9 @@ describe('ResumesPage import modes', () => {
     renderResumesPage()
     await screen.findByText('resume.pdf')
     await user.click(screen.getByRole('button', { name: 'View analysis' }))
-    await screen.findByText(/Verified skills \(2\)/)
-    await user.click(screen.getByRole('button', { name: 'Import' }))
+    await screen.findByText(/Resume Review/i)
+    await screen.findByText(/Import into profile/i)
+    // On review page, import UI is visible by default
 
     const fill = screen.getByRole('radio', { name: 'Fill empty' }) as HTMLInputElement
     expect(fill.checked).toBe(true)

@@ -50,6 +50,8 @@ export interface VerifiedSkill {
    * "Native", "B2"). Analysis-only: never mapped to a profile skill level.
    */
   proficiency?: string;
+  /** Optional context/category label from skills list. */
+  context?: string;
 }
 
 export interface ReviewCandidate {
