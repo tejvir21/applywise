@@ -1,0 +1,32 @@
+# ApplyWise first-party employer job boards
+# -----------------------------------------------------------------------------
+# These are employers' OWN public application boards, not a search engine.
+# They are used because aggregator coverage of Indian product companies is
+# thin and an employer's own board is the most authoritative source available.
+#
+# Format (one board per line, '#' starts a comment):
+#   key|Company Name|provider|boardToken|careersPageUrl
+#
+#   provider   greenhouse | lever | ashby
+#   boardToken the public identifier in the vendor's board URL, e.g.
+#              boards.greenhouse.io/<token>  or  jobs.lever.co/<token>
+#
+# VERIFY A TOKEN BEFORE ADDING IT. An unverified or wrong token returns HTTP 404
+# and the board is silently skipped. Check it against the official endpoint:
+#   greenhouse : https://boards-api.greenhouse.io/v1/boards/<token>/jobs
+#   lever      : https://api.lever.co/v0/postings/<token>?mode=json
+#   ashby      : https://api.ashbyhq.com/posting-api/job-board/<token>
+# A correct token answers HTTP 200 with a JSON array of postings. Find the token
+# on the employer's own careers page — never guess it.
+#
+# Every board below was verified live against its official endpoint.
+# -----------------------------------------------------------------------------
+
+# Verified 200, 9 postings, all Bengaluru (India).
+groww|Groww|greenhouse|groww|https://groww.xyz/careers
+
+# Verified 200, 59 postings, 56 in Bangalore/Karnataka (India).
+meesho|Meesho|lever|meesho|https://meesho.com/careers
+
+# Verified 200, 392 postings, 17 with Bengaluru/Mumbai locations.
+mongodb|MongoDB|greenhouse|mongodb|https://www.mongodb.com/careers

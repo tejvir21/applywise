@@ -1,57 +1,79 @@
-import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { PageHeader } from '@/components/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useHealth } from '@/hooks/useHealth'
-import { usePlatforms } from '@/hooks/usePlatforms'
-import { getSubmissionSettings, updateSubmissionSettings } from '@/services/platforms'
+﻿import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PageHeader } from "@/components/PageHeader";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useHealth } from "@/hooks/useHealth";
+import { usePlatforms } from "@/hooks/usePlatforms";
+import {
+  getSubmissionSettings,
+  updateSubmissionSettings,
+} from "@/services/platforms";
+import { useTheme } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
+import {
+  Moon,
+  Sun,
+  Monitor,
+  Settings2,
+  Shield,
+  Briefcase,
+  UserRound,
+} from "lucide-react";
 
-type PlatformRow = { platform: string; mode: string; authorized: boolean }
+type PlatformRow = { platform: string; mode: string; authorized: boolean };
 
 export function SettingsPage() {
-  const queryClient = useQueryClient()
-  const health = useHealth()
-  const platformsQuery = usePlatforms()
+  const queryClient = useQueryClient();
+  const health = useHealth();
+  const platformsQuery = usePlatforms();
+  const { theme, setTheme } = useTheme();
   const settingsQuery = useQuery({
-    queryKey: ['submission-settings'],
+    queryKey: ["submission-settings"],
     queryFn: getSubmissionSettings,
     retry: 1,
-  })
+  });
 
-  const [paused, setPaused] = useState<boolean | null>(null)
-  const [dailyLimit, setDailyLimit] = useState('')
-  const [minScore, setMinScore] = useState('')
-  const [rows, setRows] = useState<PlatformRow[] | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [paused, setPaused] = useState<boolean | null>(null);
+  const [dailyLimit, setDailyLimit] = useState("");
+  const [minScore, setMinScore] = useState("");
+  const [rows, setRows] = useState<PlatformRow[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const settings = settingsQuery.data ?? null
-  const snapshot = settings ? JSON.stringify(settings) : null
-  const [synced, setSynced] = useState<string | null>(null)
+  const settings = settingsQuery.data ?? null;
+  const snapshot = settings ? JSON.stringify(settings) : null;
+  const [synced, setSynced] = useState<string | null>(null);
   if (snapshot && snapshot !== synced) {
-    setSynced(snapshot)
-    setPaused(settings!.globalPaused)
-    setDailyLimit(settings!.dailyLimit.toString())
-    setMinScore(settings!.minMatchScore.toString())
-    setRows(settings!.platforms.map((p) => ({ ...p })))
+    setSynced(snapshot);
+    setPaused(settings!.globalPaused);
+    setDailyLimit(settings!.dailyLimit.toString());
+    setMinScore(settings!.minMatchScore.toString());
+    setRows(settings!.platforms.map((p) => ({ ...p })));
   }
 
   async function onSave(event: React.FormEvent) {
-    event.preventDefault()
-    const limit = dailyLimit.trim() === '' ? undefined : Number(dailyLimit)
-    const score = minScore.trim() === '' ? undefined : Number(minScore)
-    if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 100)) {
-      setError('Daily limit must be a whole number between 1 and 100.')
-      return
+    event.preventDefault();
+    const limit = dailyLimit.trim() === "" ? undefined : Number(dailyLimit);
+    const score = minScore.trim() === "" ? undefined : Number(minScore);
+    if (
+      limit !== undefined &&
+      (!Number.isInteger(limit) || limit < 1 || limit > 100)
+    ) {
+      setError("Daily limit must be a whole number between 1 and 100.");
+      return;
     }
-    if (score !== undefined && (!Number.isInteger(score) || score < 0 || score > 100)) {
-      setError('Minimum match score must be a whole number between 0 and 100.')
-      return
+    if (
+      score !== undefined &&
+      (!Number.isInteger(score) || score < 0 || score > 100)
+    ) {
+      setError("Minimum match score must be a whole number between 0 and 100.");
+      return;
     }
-    setError(null)
-    setNotice(null)
-    setBusy(true)
+    setError(null);
+    setNotice(null);
+    setBusy(true);
     try {
       await updateSubmissionSettings({
         globalPaused: paused ?? undefined,
@@ -59,182 +81,368 @@ export function SettingsPage() {
         minMatchScore: score,
         platforms: (rows ?? []).map((r) => ({
           platform: r.platform,
-          mode: r.mode as 'auto' | 'permission' | 'disabled',
+          mode: r.mode as "auto" | "permission" | "disabled",
           authorized: r.authorized,
         })),
-      })
-      setNotice('Submission settings saved.')
-      await queryClient.invalidateQueries({ queryKey: ['submission-settings'] })
+      });
+      setNotice("Settings saved successfully.");
+      await queryClient.invalidateQueries({
+        queryKey: ["submission-settings"],
+      });
+      setTimeout(() => setNotice(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+      setError(err instanceof Error ? err.message : "Save failed");
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   function setRowMode(platform: string, mode: string) {
     setRows((prev) => {
-      const list = prev ?? []
+      const list = prev ?? [];
       if (list.some((r) => r.platform === platform)) {
-        return list.map((r) => (r.platform === platform ? { ...r, mode } : r))
+        return list.map((r) => (r.platform === platform ? { ...r, mode } : r));
       }
-      return [...list, { platform, mode, authorized: false }]
-    })
+      return [...list, { platform, mode, authorized: false }];
+    });
   }
 
   function setRowAuthorized(platform: string, authorized: boolean) {
     setRows((prev) => {
-      const list = prev ?? []
+      const list = prev ?? [];
       if (list.some((r) => r.platform === platform)) {
-        return list.map((r) => (r.platform === platform ? { ...r, authorized } : r))
+        return list.map((r) =>
+          r.platform === platform ? { ...r, authorized } : r,
+        );
       }
-      return [...list, { platform, mode: 'permission', authorized }]
-    })
+      return [...list, { platform, mode: "permission", authorized }];
+    });
   }
 
+  const themeOptions = [
+    { value: "light", label: "Light", icon: Sun },
+    { value: "dark", label: "Dark", icon: Moon },
+    { value: "system", label: "System", icon: Monitor },
+  ] as const;
+
   return (
-    <div>
+    <div className="mx-auto max-w-5xl space-y-8">
       <PageHeader
         title="Settings"
-        description="Submission automation controls. Sign-in uses secure sessions; provider selection stays server configuration."
+        description="Manage your preferences, automation controls, and account configuration."
+        eyebrow="SETTINGS"
       />
-      {settingsQuery.isPending && <p className="text-sm text-slate-600">Loading settings…</p>}
-      {settingsQuery.isError && (
-        <div role="alert" className="rounded-xl border border-red-300 bg-red-50 px-6 py-8 text-center">
-          <h2 className="text-sm font-semibold text-red-900">Could not load settings</h2>
-          <button
-            type="button"
-            onClick={() => settingsQuery.refetch()}
-            className="mt-4 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+
+      {settingsQuery.isPending && (
+        <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+          <svg
+            className="h-4 w-4 animate-spin"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
           >
-            Retry
-          </button>
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          Loading settings…
         </div>
       )}
-      {!settingsQuery.isPending && !settingsQuery.isError && (
-        <form onSubmit={(e) => void onSave(e)} className="space-y-4">
-          {error && (
-            <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
-              {error}
+      {settingsQuery.isError && (
+        <Card className="border-[var(--border)] shadow-[var(--shadow-sm)]">
+          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+            <p className="text-sm font-medium text-[var(--text-primary)]">
+              Could not load settings
             </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => settingsQuery.refetch()}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!settingsQuery.isPending && !settingsQuery.isError && (
+        <form onSubmit={(e) => void onSave(e)} className="space-y-6">
+          {error && (
+            <div
+              role="alert"
+              className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface-secondary)] px-4 py-3 text-sm text-[var(--text-primary)]"
+            >
+              {error}
+            </div>
           )}
           {notice && (
-            <p role="status" className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            <div
+              role="status"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-3 text-sm text-[var(--text-primary)]"
+            >
               {notice}
-            </p>
+            </div>
           )}
-          <Card>
-            <CardHeader>
-              <CardTitle>Automated submissions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <label className="flex items-center gap-2 text-slate-700">
+
+          {/* Account */}
+
+          <Card className="border-[var(--border)] shadow-[var(--shadow-sm)]">
+            <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-6 py-4">
+              <UserRound className="h-4 w-4 text-[var(--text-tertiary)]" />
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                Account
+              </h2>
+            </div>
+            <CardContent className="space-y-4 sm:px-6 sm:py-5">
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-3">
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Account settings are managed through your session.
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                  Sign-in uses secure sessions.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Appearance */}
+
+          <Card className="border-[var(--border)] shadow-[var(--shadow-sm)]">
+            <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-6 py-4">
+              <Moon className="h-4 w-4 text-[var(--text-tertiary)]" />
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                Appearance
+              </h2>
+            </div>
+            <CardContent className="px-6 sm:py-5">
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    Theme
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    Choose your preferred color scheme
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {themeOptions.map((option) => {
+                    const Icon = option.icon;
+                    const isActive = theme === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setTheme(option.value)}
+                        className={cn(
+                          "flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm transition-all",
+                          isActive
+                            ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-foreground)] shadow-[var(--shadow-sm)]"
+                            : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]",
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Automated submissions */}
+
+          <Card className="border-[var(--border)] shadow-[var(--shadow-sm)]">
+            <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-6 py-4">
+              <Settings2 className="h-4 w-4 text-[var(--text-tertiary)]" />
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                Automated submissions
+              </h2>
+            </div>
+            <CardContent className="space-y-4 px-6 sm:py-5">
+              <label className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   checked={paused ?? false}
                   onChange={(e) => setPaused(e.target.checked)}
+                  className="h-4 w-4 rounded border-[var(--border-strong)] text-[var(--accent)] focus:ring-[var(--ring)]"
                 />
-                Global pause — stop all new automated submissions immediately
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    Global pause
+                  </p>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Stop all new automated submissions immediately
+                  </p>
+                </div>
               </label>
-              <label className="block text-slate-700">
-                Maximum applications per day
-                <input
-                  aria-label="Maximum applications per day"
-                  type="number"
-                  value={dailyLimit}
-                  onChange={(e) => setDailyLimit(e.target.value)}
-                  className="ml-2 w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
-                />
-              </label>
-              <label className="block text-slate-700">
-                Minimum match score for automatic submission
-                <input
-                  aria-label="Minimum match score"
-                  type="number"
-                  value={minScore}
-                  onChange={(e) => setMinScore(e.target.value)}
-                  className="ml-2 w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
-                />
-              </label>
-              <p className="text-xs text-slate-500">
-                Limits count actual submission attempts. No automatic submission path exists for any
-                platform today, so these guard future integrations.
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1.5">
+                  <span className="text-sm font-medium text-[var(--text-primary)]">
+                    Maximum applications per day
+                  </span>
+                  <input
+                    aria-label="Maximum applications per day"
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={dailyLimit}
+                    onChange={(e) => setDailyLimit(e.target.value)}
+                    className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-sm font-medium text-[var(--text-primary)]">
+                    Minimum match score for automatic submission
+                  </span>
+                  <input
+                    aria-label="Minimum match score"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={minScore}
+                    onChange={(e) => setMinScore(e.target.value)}
+                    className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-[var(--text-tertiary)]">
+                These are guardrails for future integrations. No automatic
+                submission path exists for any platform today.
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Platforms</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm">
-              {platformsQuery.isPending && <p className="text-slate-600">Loading platforms…</p>}
+          {/* Platforms */}
+          <Card className="border-[var(--border)] shadow-[var(--shadow-sm)]">
+            <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-6 py-4">
+              <Briefcase className="h-4 w-4 text-[var(--text-tertiary)]" />
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                Platforms
+              </h2>
+            </div>
+            <CardContent className="px-6 sm:py-5">
+              {platformsQuery.isPending && (
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Loading platforms…
+                </p>
+              )}
               {platformsQuery.data && (
-                <ul className="space-y-2">
+                <div className="space-y-2">
                   {platformsQuery.data.map((platform) => {
-                    const row = rows?.find((r) => r.platform === platform.platform)
+                    const row = rows?.find(
+                      (r) => r.platform === platform.platform,
+                    );
                     return (
-                      <li key={platform.platform} className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 px-3 py-2">
-                        <span className="font-medium text-slate-900">{platform.displayName}</span>
-                        <span className="text-xs text-slate-500">apply: {platform.capabilities.submit.status}</span>
-                        <label className="text-xs text-slate-600">
-                          mode
-                          <select
-                            aria-label={`Mode for ${platform.displayName}`}
-                            value={row?.mode ?? 'permission'}
-                            onChange={(e) => setRowMode(platform.platform, e.target.value)}
-                            className="ml-1 rounded-md border border-slate-300 px-1 py-0.5 text-xs"
-                          >
-                            <option value="auto">auto</option>
-                            <option value="permission">permission</option>
-                            <option value="disabled">disabled</option>
-                          </select>
-                        </label>
-                        <label className="text-xs text-slate-600">
-                          <input
-                            type="checkbox"
-                            checked={row?.authorized ?? false}
-                            onChange={(e) => setRowAuthorized(platform.platform, e.target.checked)}
-                            className="mr-1"
-                          />
-                          authorized
-                        </label>
-                      </li>
-                    )
+                      <div
+                        key={platform.platform}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border)] px-4 py-3"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">
+                            {platform.displayName}
+                          </p>
+                          <p className="text-xs text-[var(--text-tertiary)]">
+                            Apply: {platform.capabilities.submit.status}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                            <span>Mode</span>
+                            <select
+                              aria-label={`Mode for ${platform.displayName}`}
+                              value={row?.mode ?? "permission"}
+                              onChange={(e) =>
+                                setRowMode(platform.platform, e.target.value)
+                              }
+                              className="h-9 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 text-sm text-[var(--text-primary)]"
+                            >
+                              <option value="auto">Auto</option>
+                              <option value="permission">Permission</option>
+                              <option value="disabled">Disabled</option>
+                            </select>
+                          </label>
+                          <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
+                            <input
+                              type="checkbox"
+                              checked={row?.authorized ?? false}
+                              onChange={(e) =>
+                                setRowAuthorized(
+                                  platform.platform,
+                                  e.target.checked,
+                                )
+                              }
+                              className="h-4 w-4 rounded border-[var(--border-strong)]"
+                            />
+                            <span>Authorized</span>
+                          </label>
+                        </div>
+                      </div>
+                    );
                   })}
-                </ul>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {busy ? 'Saving…' : 'Save settings'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="submit" disabled={busy}>
+              {busy ? "Saving…" : "Save changes"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => settingsQuery.refetch()}
+            >
+              Cancel
+            </Button>
+          </div>
         </form>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>AI provider (server configuration)</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-slate-600">
-          {health.isPending && <p>Loading…</p>}
-          {health.data && <p>Active provider: {health.data.ai_provider}. Changing providers is server configuration, not an in-app setting.</p>}
-        </CardContent>
-      </Card>
+      {/* Privacy & Security */}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Data export</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-slate-600">
-          Data export is not available yet.
+      <Card className="border-[var(--border)] shadow-[var(--shadow-sm)]">
+        <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-6 py-4">
+          <Shield className="h-4 w-4 text-[var(--text-tertiary)]" />
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            Privacy & Security
+          </h2>
+        </div>
+        <CardContent className="space-y-3 px-6 sm:py-5 text-sm">
+          <div className="flex items-center justify-between rounded-lg border border-[var(--border)] px-4 py-3">
+            <div>
+              <p className="font-medium text-[var(--text-primary)]">
+                AI provider
+              </p>
+              <p className="text-[var(--text-secondary)]">
+                Server configuration
+              </p>
+            </div>
+            <span className="text-sm text-[var(--text-tertiary)]">
+              {health.data?.ai_provider ?? "Loading…"}
+            </span>
+          </div>
+          <div className="rounded-lg border border-[var(--border)] px-4 py-3">
+            <p className="font-medium text-[var(--text-primary)]">
+              Data export
+            </p>
+            <p className="mt-1 text-[var(--text-secondary)]">
+              Data export is not available yet.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

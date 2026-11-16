@@ -14,6 +14,7 @@ import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { NotFoundError } from '../utils/errors.js';
 import { Types } from 'mongoose';
+import { getJobReadiness } from '../platforms/SubmissionPolicy.js';
 
 const router = Router();
 
@@ -55,6 +56,17 @@ router.get('/settings/submission', async (req: AuthenticatedRequest, res: Respon
  */
 router.put('/settings/submission', validate(updateSubmissionSettingsSchema), async (req: AuthenticatedRequest, res: Response) => {
   const result = await updateSubmissionSettings(new Types.ObjectId(req.user!.sub), req.body);
+  res.json({ success: true, data: result });
+});
+
+/**
+ * GET /api/platforms/:platform/submission-readiness/:applicationId
+ * Evaluate submission readiness for a specific application on a platform.
+ */
+router.get('/:platform/submission-readiness/:applicationId', async (req: AuthenticatedRequest, res: Response) => {
+  const platform = Array.isArray(req.params.platform) ? req.params.platform[0] : req.params.platform;
+  const applicationId = Array.isArray(req.params.applicationId) ? req.params.applicationId[0] : req.params.applicationId;
+  const result = await getJobReadiness(new Types.ObjectId(req.user!.sub), applicationId, platform);
   res.json({ success: true, data: result });
 });
 

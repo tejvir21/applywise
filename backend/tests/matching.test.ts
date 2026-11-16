@@ -225,6 +225,67 @@ describe('computeJobMatch (pure, deterministic)', () => {
     expect(result.evaluatedWeight).toBe(100);
     expect(result.score).toBe(20);
   });
+
+  it('matches skills case-insensitively', () => {
+    const job: MatchableJob = { ...STRONG_JOB, requiredSkills: [{ name: 'TYPESCRIPT', required: true }], preferredSkills: [] };
+    const profile: MatchableProfile = { ...STRONG_PROFILE, skills: [{ name: 'typescript' }] };
+    const result = computeJobMatch(job, profile);
+    expect(factorOf(result, 'skillsRequired').score).toBe(100);
+  });
+
+  it('does not double-count duplicate profile skills', () => {
+    const job: MatchableJob = { ...STRONG_JOB, requiredSkills: [{ name: 'TypeScript', required: true }], preferredSkills: [] };
+    const profile: MatchableProfile = { ...STRONG_PROFILE, skills: [{ name: 'TypeScript' }, { name: 'TypeScript' }] };
+    const result = computeJobMatch(job, profile);
+    expect(factorOf(result, 'skillsRequired').score).toBe(100);
+    expect(result.score).toBe(100);
+  });
+
+  it('treats empty candidate skills as unknown, not absence', () => {
+    const job: MatchableJob = { ...STRONG_JOB, requiredSkills: [{ name: 'TypeScript', required: true }] };
+    const profile: MatchableProfile = { ...STRONG_PROFILE, skills: [] };
+    const result = computeJobMatch(job, profile);
+    expect(factorOf(result, 'skillsRequired').evaluable).toBe(false);
+    // All other factors remain perfect; unknown skills do not penalize.
+    expect(result.score).toBe(100);
+  });
+
+  it('scores zero for no required-skill match', () => {
+    const job: MatchableJob = { ...STRONG_JOB, requiredSkills: [{ name: 'COBOL', required: true }, { name: 'FORTRAN', required: true }] };
+    const result = computeJobMatch(job, STRONG_PROFILE);
+    expect(factorOf(result, 'skillsRequired').score).toBe(0);
+    expect(result.score).toBeLessThan(100);
+  });
+
+  it('handles missing job description gracefully', () => {
+    const job: MatchableJob = { ...STRONG_JOB, description: undefined, requirements: undefined };
+    const result = computeJobMatch(job, STRONG_PROFILE);
+    expect(Number.isInteger(result.score)).toBe(true);
+    expect(result.score).toBeGreaterThanOrEqual(0);
+    expect(result.score).toBeLessThanOrEqual(100);
+  });
+
+  it('scores experience mismatch proportionally', () => {
+    const profile: MatchableProfile = { ...STRONG_PROFILE, yearsOfExperience: 1 };
+    const result = computeJobMatch(STRONG_JOB, profile);
+    expect(factorOf(result, 'experience').score).toBe(20);
+  });
+
+  it('keeps score within 0-100 for all edge inputs', () => {
+    const cases: Array<[MatchableJob, MatchableProfile]> = [
+      [STRONG_JOB, STRONG_PROFILE],
+      [STRONG_JOB, {}],
+      [{ title: 'X', companyName: 'Y' }, {}],
+      [{ ...STRONG_JOB, requiredSkills: [{ name: 'COBOL', required: true }] }, STRONG_PROFILE],
+      [{ title: '', companyName: '' }, STRONG_PROFILE],
+    ];
+    for (const [job, profile] of cases) {
+      const result = computeJobMatch(job, profile);
+      expect(Number.isInteger(result.score)).toBe(true);
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      expect(result.score).toBeLessThanOrEqual(100);
+    }
+  });
 });
 
 describe('Job match API', () => {

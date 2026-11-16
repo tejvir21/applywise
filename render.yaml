@@ -1,0 +1,76 @@
+# Render Blueprint — reproducible deployment configuration
+# ApplyWise backend (Express + TypeScript) + frontend (React/Vite)
+# https://docs.render.com/blueprint-spec
+
+services:
+  # Backend API
+  - type: web
+    name: applywise-api
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: backend
+    buildCommand: npm install && npx playwright install chromium && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health/live
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: PORT
+        value: "8000"
+      # Set these in the Render dashboard (secrets):
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: ai_job_application_agent
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_ACCESS_TTL_MINUTES
+        value: "15"
+      - key: JWT_REFRESH_TTL_DAYS
+        value: "30"
+      - key: CLIENT_URL
+        sync: false
+      - key: AI_PROVIDER
+        value: mock
+      - key: BROWSER_AUTOMATION_PROVIDER
+        value: playwright
+      - key: STORAGE_PROVIDER
+        value: supabase
+      - key: RESUME_STORAGE_FALLBACK
+        value: none
+      - key: SUPABASE_RESUME_BUCKET
+        value: resumes
+      - key: MAX_RESUME_SIZE_MB
+        value: "10"
+      - key: RATE_LIMIT_AI_GENERATION_PER_MINUTE
+        value: "10"
+      - key: RATE_LIMIT_RESUME_UPLOAD_PER_MINUTE
+        value: "5"
+      - key: RATE_LIMIT_RESUME_ANALYSIS_PER_MINUTE
+        value: "5"
+      - key: RATE_LIMIT_JOB_INGESTION_PER_MINUTE
+        value: "10"
+
+  # Frontend SPA
+  - type: web
+    name: applywise-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://applywise-api.onrender.com

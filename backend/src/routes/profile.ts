@@ -38,6 +38,8 @@ import {
   removeCertification,
   getProfileCompletion,
 } from '../services/CandidateProfileService.js';
+import { assessProfileReadiness, assessJobReadiness } from '../services/ProfileReadinessService.js';
+import { getJobById } from '../services/JobService.js';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { NotFoundError, ValidationError } from '../utils/errors.js';
@@ -132,6 +134,37 @@ router.get('/completion', async (req: AuthenticatedRequest, res: Response) => {
   const completion = await getProfileCompletion(getUserId(req));
   res.json({ success: true, data: completion });
 });
+
+/**
+ * GET /api/profile/readiness
+ * Profile completeness + readiness, including resume availability.
+ */
+router.get('/readiness', async (req: AuthenticatedRequest, res: Response) => {
+  const readiness = await assessProfileReadiness(getUserId(req));
+  res.json({ success: true, data: readiness });
+});
+
+/**
+ * GET /api/profile/readiness/jobs/:jobId
+ * Job-specific profile readiness for the authenticated candidate.
+ *
+ * Read-only: tells the candidate how ready their profile is for a
+ * particular job (missing profile info, missing/matched job skills).
+ * Never creates applications, submissions, reservations, or modifies
+ * the profile or job.
+ */
+router.get(
+  '/readiness/jobs/:jobId',
+  async (req: AuthenticatedRequest, res: Response) => {
+    const jobId = toObjectIdString(req.params.jobId);
+    const job = await getJobById(jobId);
+    if (!job) {
+      throw new NotFoundError('Job', jobId);
+    }
+    const readiness = await assessJobReadiness(getUserId(req), job);
+    res.json({ success: true, data: readiness });
+  },
+);
 
 /**
  * GET /api/profile/preferences

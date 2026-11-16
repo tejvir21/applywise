@@ -7,6 +7,14 @@ export { JobModel, SavedJobModel } from './Job.js';
 export { ApplicationModel, ApplicationEventModel, APPLICATION_STATUSES } from './Application.js';
 export { SubmissionSettingsModel } from './SubmissionSettings.js';
 export { RefreshSessionModel } from './RefreshSession.js';
+export { BrowserAutomationExecutionModel } from './BrowserAutomationExecution.js';
+export { ApplicationPreparationModel } from './ApplicationPreparation.js';
+export type {
+  IAutomationExecution,
+  IAutomationFieldMapping,
+  IAutomationFillResult,
+  AutomationExecutionState,
+} from './BrowserAutomationExecution.js';
 export type {
   ICandidateProfile,
   ISkill,

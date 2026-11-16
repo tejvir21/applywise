@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/PageHeader'
 import { useJob } from '@/hooks/useResumes'
+import { JobProfileReadiness } from '@/components/JobProfileReadiness'
 
 export function JobDetailPage() {
   const { id = '' } = useParams()
@@ -65,11 +66,15 @@ export function JobDetailPage() {
             </a>
           </p>
         )}
-        <p className="mt-3">
-          <Link to="/jobs" className="text-brand-700 underline">
-            Back to jobs
-          </Link>
-        </p>
+      </div>
+      <JobProfileReadiness jobId={id} />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link to="/jobs" className="text-brand-700 underline">
+          Back to jobs
+        </Link>
+        <Link to={`/automation/${id}`} className="text-brand-700 underline">
+          Start browser automation
+        </Link>
       </div>
     </div>
   )

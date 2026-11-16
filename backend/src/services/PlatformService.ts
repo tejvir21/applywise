@@ -2,13 +2,15 @@
 
 import { Types } from 'mongoose';
 import { SubmissionSettingsModel } from '../models/SubmissionSettings.js';
-import { ApplicationModel, ApplicationEventModel } from '../models/Application.js';
+import { ApplicationModel } from '../models/Application.js';
+import { DailySubmissionCounterModel } from '../models/DailySubmissionCounter.js';
 import { getPlatform, getCapability } from '../platforms/PlatformCapabilities.js';
 import { submissionRegistry } from '../platforms/SubmissionAdapter.js';
 import {
   evaluateSubmissionPolicy,
   defaultPolicySettings,
   type PolicyEvaluation,
+  type PolicySettings,
 } from '../platforms/SubmissionPolicy.js';
 import { ApplicationRepository } from '../repositories/ApplicationRepository.js';
 import { JobRepository } from '../repositories/JobRepository.js';
@@ -45,13 +47,16 @@ function startOfToday(): Date {
   return now;
 }
 
-export async function getSubmissionSettings(userId: Types.ObjectId) {
+export async function getSubmissionSettings(userId: Types.ObjectId): Promise<PolicySettings & { platforms: PlatformSettingInput[] }> {
   const stored = await SubmissionSettingsModel.findOne({ userId }).lean().exec();
   if (stored) {
     return {
       globalPaused: stored.globalPaused,
       dailyLimit: stored.dailyLimit,
       minMatchScore: stored.minMatchScore,
+      submissionsToday: 0,
+      platformMode: 'permission',
+      platformAuthorized: false,
       platforms: stored.platforms,
     };
   }
@@ -92,16 +97,15 @@ export async function evaluateApplicationPolicy(
   const descriptor = getPlatform(platform);
   const capability = getCapability(platform, 'submit');
   const settings = await getSubmissionSettings(userId);
-  const platformSetting = settings.platforms.find((p) => p.platform === platform);
+  const platformSetting = settings.platforms.find((p: PlatformSettingInput) => p.platform === platform);
 
   // Count today's submission-attempt audit events across all of the user's
   // applications. No submission engine exists yet, so this is normally zero;
   // the wiring is real and covered with seeded events in tests.
-  const counted = await ApplicationEventModel.countDocuments({
-    userId,
-    type: 'submission_attempted',
-    createdAt: { $gte: startOfToday() },
-  }).exec();
+  const day = new Date(); day.setUTCHours(0,0,0,0);
+  const dayStr = day.toISOString().slice(0,10);
+  const counter = await DailySubmissionCounterModel.findOne({ userId, day: dayStr }).lean().exec();
+  const counted = counter?.count ?? 0;
 
   const duplicate = await ApplicationModel.exists({
     userId,

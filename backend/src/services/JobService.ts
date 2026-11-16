@@ -6,6 +6,7 @@ import { jobSourceRegistry, mockJobSource, manualJobSource } from '../jobs/index
 import { JobRepository, SavedJobRepository, CreateJobData } from '../repositories/JobRepository.js';
 import { NotFoundError, ValidationError, ConflictError } from '../utils/errors.js';
 import type { CreateManualJobInput } from '../schemas/job.js';
+import { findDuplicate, candidateFromJob } from './DuplicateDetectionService.js';
 
 const jobRepository = new JobRepository();
 const savedJobRepository = new SavedJobRepository();
@@ -172,7 +173,22 @@ export async function createManualJob(
       duplicateJobId: existingByKey._id.toString(),
     };
   }
-  
+
+  // Conservative similarity check against the user's existing active jobs.
+  const existingJobs = await JobModel.find({
+    userId: userId.toString(),
+    status: { $ne: 'deleted' },
+  }).lean<IJob[]>().exec();
+  const sim = await findDuplicate(candidateFromJob(normalized), existingJobs);
+  if (sim.isDuplicate && sim.match) {
+    const existing = await JobModel.findById(sim.match.existingJobId).lean<IJob>().exec();
+    return {
+      job: mapJobToDetail(existing),
+      isDuplicate: true,
+      duplicateJobId: sim.match.existingJobId,
+    };
+  }
+
   // Create job with userId for ownership
   const createData: CreateJobData = {
     ...normalized,
@@ -254,10 +270,19 @@ export async function importMockJobs(
   let skipped = 0;
   const importedJobs: JobDetail[] = [];
   
+  const existingJobs = await JobModel.find({ status: { $ne: 'deleted' } }).lean<IJob[]>().exec();
+  
   for (const mockJob of result.jobs) {
     // Check if already exists
     const exists = await jobRepository.existsBySource(mockJob.sourceName, mockJob.sourceJobId);
     if (exists) {
+      skipped++;
+      continue;
+    }
+    
+    // Conservative similarity check against existing jobs.
+    const sim = await findDuplicate(candidateFromJob(mockJob), existingJobs);
+    if (sim.isDuplicate && sim.match) {
       skipped++;
       continue;
     }
@@ -281,6 +306,7 @@ export async function importMockJobs(
     const job = await jobRepository.create(createData);
     importedJobs.push(mapJobToDetail(job));
     imported++;
+    existingJobs.push(job);
   }
   
   return { imported, skipped, jobs: importedJobs };
@@ -333,15 +359,25 @@ export async function importFromSource(
   };
   
   const result = await adapter.searchJobs(searchCriteria);
-  
+   
   let imported = 0;
   let skipped = 0;
   const importedJobs: JobDetail[] = [];
   
+  // Load existing active jobs once for similarity dedupe.
+  const existingJobs = await JobModel.find({ status: { $ne: 'deleted' } }).lean<IJob[]>().exec();
+  
   for (const normalizedJob of result.jobs) {
-    // Check if already exists
+    // Check if already exists by source
     const exists = await jobRepository.existsBySource(normalizedJob.sourceName, normalizedJob.sourceJobId);
     if (exists) {
+      skipped++;
+      continue;
+    }
+    
+    // Conservative similarity check against existing jobs.
+    const sim = await findDuplicate(candidateFromJob(normalizedJob), existingJobs);
+    if (sim.isDuplicate && sim.match) {
       skipped++;
       continue;
     }
@@ -366,6 +402,7 @@ export async function importFromSource(
     const job = await jobRepository.create(createData);
     importedJobs.push(mapJobToDetail(job));
     imported++;
+    existingJobs.push(job);
   }
   
   return { imported, skipped, jobs: importedJobs };
@@ -467,5 +504,89 @@ function mapJobToDetail(job: any): JobDetail {
     expiresAt: job.expiresAt,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
+  };
+}
+
+/**
+ * Import a job from a URL when platform scraping is not authorized.
+ * The candidate manually supplies job details; this function creates
+ * the job record with proper duplicate detection.
+ */
+export async function importJobFromUrl(
+  userId: Types.ObjectId,
+  jobData: {
+    title: string;
+    companyName: string;
+    location?: string;
+    description?: string;
+    applicationUrl?: string;
+    remoteType?: string;
+    employmentType?: string;
+    experienceLevel?: string;
+    sources: Array<{ name: string; sourceJobId?: string; sourceUrl?: string; discoveredAt?: Date }>;
+  },
+  platform: string,
+  scrapingAvailable: boolean,
+): Promise<{ job: JobDetail; isDuplicate: boolean; duplicateJobId?: string; scrapingAvailable: boolean }> {
+  // Normalize using manual job source
+  const normalized = manualJobSource.normalizeJob({
+    ...jobData,
+    sourceName: platform,
+    sourceUrl: jobData.sources[0]?.sourceUrl,
+  });
+
+  // Check for duplicate by source
+  const existingBySource = await jobRepository.findBySource(normalized.sourceName, normalized.sourceJobId);
+  if (existingBySource) {
+    return {
+      job: mapJobToDetail(existingBySource),
+      isDuplicate: true,
+      duplicateJobId: existingBySource._id.toString(),
+      scrapingAvailable,
+    };
+  }
+
+  // Check for duplicate by normalized key
+  const dedupKey = manualJobSource.generateDeduplicationKey(normalized);
+  const existingByKey = await jobRepository.findByNormalizedKey(dedupKey);
+  if (existingByKey) {
+    return {
+      job: mapJobToDetail(existingByKey),
+      isDuplicate: true,
+      duplicateJobId: existingByKey._id.toString(),
+      scrapingAvailable,
+    };
+  }
+
+  // Conservative similarity check against the user's existing active jobs.
+  const existingJobs = await JobModel.find({
+    userId: userId.toString(),
+    status: { $ne: 'deleted' },
+  }).lean<IJob[]>().exec();
+  const sim = await findDuplicate(candidateFromJob(normalized), existingJobs);
+  if (sim.isDuplicate && sim.match) {
+    const existing = await JobModel.findById(sim.match.existingJobId).lean<IJob>().exec();
+    return {
+      job: mapJobToDetail(existing!),
+      isDuplicate: true,
+      duplicateJobId: sim.match.existingJobId,
+      scrapingAvailable,
+    };
+  }
+
+  // Create job with userId for ownership
+  const createData: CreateJobData = {
+    ...normalized,
+    normalizedKey: dedupKey,
+    status: 'active',
+    userId: userId.toString(),
+  };
+
+  const job = await jobRepository.create(createData);
+
+  return {
+    job: mapJobToDetail(job),
+    isDuplicate: false,
+    scrapingAvailable,
   };
 }

@@ -7,6 +7,7 @@ import { createApp } from '../src/app.js';
 import { connectToDatabase, disconnectDatabase, isDatabaseConnected } from '../src/config/database.js';
 import { UserModel, JobModel, SavedJobModel, CandidateProfileModel, ResumeModel } from '../src/models/index.js';
 import { ApplicationModel, ApplicationEventModel } from '../src/models/Application.js';
+import { DailySubmissionCounterModel } from '../src/models/DailySubmissionCounter.js';
 import { SubmissionSettingsModel } from '../src/models/SubmissionSettings.js';
 import {
   PLATFORMS,
@@ -321,7 +322,8 @@ describe('platform + policy + handoff API', () => {
     expect(paused.body.data.decision).toBe('blocked');
 
     await request(app).put(`${API_BASE}/platforms/settings/submission`).set(withAuth(user1Token)).send({ globalPaused: false, dailyLimit: 1 }).expect(200);
-    await ApplicationEventModel.create({ applicationId: new mongoose.Types.ObjectId(appId), userId: user1Id, type: 'submission_attempted' });
+    const day = new Date().toISOString().slice(0, 10);
+    await DailySubmissionCounterModel.create({ userId: user1Id, day, count: 1 });
     const spent = await request(app).post(`${API_BASE}/applications/${appId}/policy`).set(withAuth(user1Token)).send({ platform: 'indeed' }).expect(200);
     expect(spent.body.data.decision).toBe('blocked');
     expect(spent.body.data.reasons.join(' ')).toContain('Daily submission limit reached');
